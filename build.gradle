@@ -20,14 +20,18 @@ repositories {
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/pvputils-skija-patch.accesswidener")
+    mixin {
+        defaultRefmapName = "${project.archives_base_name}.refmap.json"
+    }
 }
 
 apply from: "skija.gradle"
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()
+    mappings loom.layered {
+        officialMojangMappings()
+    }
 
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
