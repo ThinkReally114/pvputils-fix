@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "pvputils-skija-patch",
+  "version": "${version}",
+  "name": "PVPUtils Skia Patch",
+  "description": "Patches PVPUtils to support all platforms (Windows/Linux/macOS/Android) by pre-loading the correct Skia native library.",
+  "authors": [
+    "ThinkReally114"
+  ],
+  "contact": {
+    "github": "https://github.com/ThinkReally114/pvputils-fix"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.pvp_utils_skija_patch.SkijaPatchMod"
+    ]
+  },
+  "mixins": [
+    "pvputils-skija-patch.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  },
+  "suggests": {
+    "pvp-utils": "*"
+  }
+}

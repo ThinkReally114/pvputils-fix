@@ -1,0 +1,91 @@
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+def pvpUtilsSkijaPatchVersion = "1.0.0"
+
+version = pvpUtilsSkijaPatchVersion
+group = "com.pvp_utils_skija_patch"
+
+base {
+    archivesName = "pvputils-skija-patch-v${pvpUtilsSkijaPatchVersion}"
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.fabricmc.net/' }
+    maven { url 'https://maven.fabricmc.net/' }
+    maven { url 'https://maven.terraformersmc.com/releases/' }
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/pvputils-skija-patch.accesswidener")
+}
+
+apply from: "skija.gradle"
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // JNA for native library loading
+    implementation include("net.java.dev.jna:jna:5.14.0")
+
+    // Skia - shared (required by all platforms)
+    implementation "io.github.humbleui:skija-shared:${skijaVersion}"
+    include "io.github.humbleui:skija-shared:${skijaVersion}"
+
+    // Skia - Windows
+    implementation "io.github.humbleui:skija-windows-x64:${skijaVersion}"
+    include "io.github.humbleui:skija-windows-x64:${skijaVersion}"
+    implementation "io.github.humbleui:skija-windows-arm64:${skijaVersion}"
+    include "io.github.humbleui:skija-windows-arm64:${skijaVersion}"
+
+    // Skia - Linux
+    implementation "io.github.humbleui:skija-linux-x64:${skijaVersion}"
+    include "io.github.humbleui:skija-linux-x64:${skijaVersion}"
+    implementation "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
+    include "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
+
+    // Skia - macOS
+    implementation "io.github.humbleui:skija-macos-x64:${skijaVersion}"
+    include "io.github.humbleui:skija-macos-x64:${skijaVersion}"
+    implementation "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
+    include "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
+
+    // Skia - Android (PojavLauncher)
+    implementation "io.github.humbleui:skija-android-x64:${skijaVersion}"
+    include "io.github.humbleui:skija-android-x64:${skijaVersion}"
+    implementation "io.github.humbleui:skija-android-arm64:${skijaVersion}"
+    include "io.github.humbleui:skija-android-arm64:${skijaVersion}"
+
+    // Annotations for mixin
+    annotationProcessor "org.spongepowered:mixin:0.8.5"
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    withSourcesJar()
+
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion.set("")
+}
