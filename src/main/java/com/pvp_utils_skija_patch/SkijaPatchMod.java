@@ -1,8 +1,6 @@
 package com.pvp_utils_skija_patch;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.minecraft.client.MinecraftClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,10 +14,7 @@ public class SkijaPatchMod implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("PVPUtils Skia Patch initialized - pre-loading native libraries");
 
-        ClientLifecycleEvents.CLIENT_STARTING.register(this::onClientStarting);
-    }
-
-    private void onClientStarting(MinecraftClient client) {
+        // Preload native library immediately on mod initialization
         if (!nativeLoaded) {
             try {
                 NativeLibraryPreloader.preload();
