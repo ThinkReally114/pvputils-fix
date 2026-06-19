@@ -14,8 +14,18 @@ import java.util.jar.JarFile;
 public class NativeLibraryPreloader {
 
     private static final String SKIJA_VERSION = "0.143.16";
+    private static boolean nativeLoaded = false;
+
+    public static boolean isNativeLoaded() {
+        return nativeLoaded;
+    }
 
     public static void preload() throws Exception {
+        if (nativeLoaded) {
+            SkijaPatchMod.LOGGER.info("Native library already loaded, skipping");
+            return;
+        }
+
         Platform platform = PlatformDetector.detectPlatform();
         String platformName = platform.getArtifactSuffix();
         String nativeLibraryName = platform.getNativeLibraryName();
@@ -78,6 +88,7 @@ public class NativeLibraryPreloader {
             System.load(absolutePath);
 
             SkijaPatchMod.LOGGER.info("Successfully loaded skija native library for {}", platform);
+            nativeLoaded = true;
 
         } finally {
             libStream.close();
