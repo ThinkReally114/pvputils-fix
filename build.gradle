@@ -71,6 +71,7 @@ dependencies {
     // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
     annotationProcessor "com.google.code.gson:gson:2.10.1"
+    annotationProcessor "com.google.guava:guava:33.0.0-jre"
 }
 
 processResources {
