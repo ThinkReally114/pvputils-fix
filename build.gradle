@@ -67,6 +67,16 @@ dependencies {
     implementation "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
     include "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
 
+    // Skia - macOS
+    implementation "io.github.humbleui:skija-macos-x64:${skijaVersion}"
+    include "io.github.humbleui:skija-macos-x64:${skijaVersion}"
+    implementation "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
+    include "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.2"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
     // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
     annotationProcessor "com.google.code.gson:gson:2.10.1"
@@ -86,6 +96,10 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
     it.options.release = 21
+}
+
+test {
+    useJUnitPlatform()
 }
 
 java {
