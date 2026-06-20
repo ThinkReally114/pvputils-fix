@@ -1,14 +1,14 @@
 # PVPUtils-fix
 
-A Fabric client-side mod that patches [PVPUtils](https://modrinth.com/mod/pvp-utils) to support Linux by pre-loading the correct Skia native library at startup.
+A Fabric client-side mod that patches [PVPUtils](https://modrinth.com/mod/pvp-utils) to support Windows and Linux by pre-loading the correct Skia native library at startup.
 
 ## Problem
 
-PVPUtils only bundles the Skia native library for Windows (`.dll`), causing crashes on other platforms when Skia features are used.
+PVPUtils only bundles the Skia native library for Windows (`.dll`), causing crashes on Linux when Skia features are used.
 
 ## Solution
 
-This mod includes Skia native libraries for all supported platforms and uses a Mixin to pre-load the correct one before PVPUtils tries to load it.
+This mod includes Skia native libraries for both Windows and Linux and uses a Mixin to pre-load the correct one before PVPUtils tries to load it.
 
 ## Supported Platforms
 
