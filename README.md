@@ -1,14 +1,14 @@
-# PVPUtils Skia Cross-Platform Patch
+# PVPUtils-fix
 
-A Fabric mod that patches PVPUtils to support all platforms (Windows/Linux/macOS/Android).
+A Fabric client-side mod that patches [PVPUtils](https://modrinth.com/mod/pvp-utils) to support Linux and macOS by pre-loading the correct Skia native library at startup.
 
 ## Problem
 
-PVPUtils only includes Skia native library for Windows (`.dll`), causing crashes on Linux/Android.
+PVPUtils only bundles the Skia native library for Windows (`.dll`), causing crashes on other platforms when Skia features are used.
 
 ## Solution
 
-This patch mod includes all platform native libraries and pre-loads the correct one at startup.
+This mod includes Skia native libraries for all supported platforms and uses a Mixin to pre-load the correct one before PVPUtils tries to load it.
 
 ## Supported Platforms
 
@@ -16,11 +16,19 @@ This patch mod includes all platform native libraries and pre-loads the correct 
 - Linux (x64, arm64)
 - macOS (x64, arm64)
 
-## Usage
+## Requirements
 
-1. Install PVPUtils normally
-2. Install this patch mod
-3. Enjoy Skia-powered features on any platform!
+- Minecraft 1.21.11
+- Fabric Loader >= 0.18.4
+- Fabric API
+- Java 21+
+
+## Installation
+
+1. Install [Fabric Loader](https://fabricmc.net/) for Minecraft 1.21.11
+2. Install [PVPUtils](https://modrinth.com/mod/pvp-utils)
+3. Install this mod into your `mods` folder
+4. Launch the game — Skia features will work on any supported platform
 
 ## Building
 
@@ -28,6 +36,12 @@ This patch mod includes all platform native libraries and pre-loads the correct 
 ./gradlew build
 ```
 
+The built jar will be in `build/libs/`.
+
 ## Download
 
-Get the latest build from [Actions](https://github.com/ThinkReally114/pvputils-fix/actions).
+Get the latest build from [GitHub Actions](https://github.com/ThinkReally114/pvputils-fix/actions).
+
+## License
+
+MIT
