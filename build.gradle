@@ -74,6 +74,13 @@ dependencies {
     annotationProcessor "org.ow2.asm:asm:9.6"
     annotationProcessor "org.ow2.asm:asm-tree:9.6"
     annotationProcessor "org.ow2.asm:asm-commons:9.6"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 processResources {

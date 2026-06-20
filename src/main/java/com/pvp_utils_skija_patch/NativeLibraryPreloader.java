@@ -4,7 +4,6 @@ import com.pvp_utils_skija_patch.util.PlatformDetector;
 import com.pvp_utils_skija_patch.util.PlatformDetector.Platform;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Enumeration;
@@ -14,7 +13,8 @@ import java.util.jar.JarFile;
 public class NativeLibraryPreloader {
 
     private static final String SKIJA_VERSION = "0.143.16";
-    private static boolean nativeLoaded = false;
+    private static volatile boolean nativeLoaded = false;
+    private static final Object LOCK = new Object();
 
     public static boolean isNativeLoaded() {
         return nativeLoaded;
@@ -26,77 +26,77 @@ public class NativeLibraryPreloader {
             return;
         }
 
-        Platform platform = PlatformDetector.detectPlatform();
-        String platformName = platform.getArtifactSuffix();
-        String nativeLibraryName = platform.getNativeLibraryName();
+        synchronized (LOCK) {
+            if (nativeLoaded) {
+                return;
+            }
 
-        SkijaPatchMod.LOGGER.info("Detected platform: {} (looking for {})", platform, platformName);
+            Platform platform = PlatformDetector.detectPlatform();
+            String platformName = platform.getArtifactSuffix();
+            String nativeLibraryName = platform.getNativeLibraryName();
 
-        // Find and extract the native library from the jar
-        String resourcePath = "/skija/native/" + platformName + "/" + nativeLibraryName;
+            SkijaPatchMod.LOGGER.info("Detected platform: {} (looking for {})", platform, platformName);
 
-        SkijaPatchMod.LOGGER.info("Looking for native library: {}", resourcePath);
+            // Find and extract the native library from the jar
+            String resourcePath = "/skija/native/" + platformName + "/" + nativeLibraryName;
 
-        // Try to find the native library in classpath
-        InputStream libStream = NativeLibraryPreloader.class.getResourceAsStream(resourcePath);
+            SkijaPatchMod.LOGGER.info("Looking for native library: {}", resourcePath);
 
-        if (libStream == null) {
-            // Try alternative paths (skija might structure files differently)
-            String[] alternativePaths = {
-                "/native/" + platformName + "/" + nativeLibraryName,
-                "/META-INF/resources/native/" + platformName + "/" + nativeLibraryName,
-                "/io/github/humbleui/skija/native/" + platformName + "/" + nativeLibraryName
-            };
+            // Try to find the native library in classpath
+            InputStream libStream = NativeLibraryPreloader.class.getResourceAsStream(resourcePath);
 
-            for (String altPath : alternativePaths) {
-                libStream = NativeLibraryPreloader.class.getResourceAsStream(altPath);
-                if (libStream != null) {
-                    resourcePath = altPath;
-                    break;
+            if (libStream == null) {
+                // Try alternative paths (skija might structure files differently)
+                String[] alternativePaths = {
+                    "/native/" + platformName + "/" + nativeLibraryName,
+                    "/META-INF/resources/native/" + platformName + "/" + nativeLibraryName,
+                    "/io/github/humbleui/skija/native/" + platformName + "/" + nativeLibraryName
+                };
+
+                for (String altPath : alternativePaths) {
+                    libStream = NativeLibraryPreloader.class.getResourceAsStream(altPath);
+                    if (libStream != null) {
+                        resourcePath = altPath;
+                        break;
+                    }
                 }
             }
-        }
 
-        if (libStream == null) {
-            // Try to find in any skija jar on classpath
-            libStream = findInSkijaJar(platform, nativeLibraryName);
-        }
+            if (libStream == null) {
+                // Try to find in any skija jar on classpath
+                libStream = findInSkijaJar(platform, nativeLibraryName);
+            }
 
-        if (libStream == null) {
-            SkijaPatchMod.LOGGER.warn("Could not find native library for platform {}", platform);
-            SkijaPatchMod.LOGGER.warn("This patch mod may not have the correct skija dependencies built in.");
-            return;
-        }
+            if (libStream == null) {
+                SkijaPatchMod.LOGGER.warn("Could not find native library for platform {}", platform);
+                SkijaPatchMod.LOGGER.warn("This patch mod may not have the correct skija dependencies built in.");
+                return;
+            }
 
-        // Extract to temp directory
-        Path tempDir = Files.createTempDirectory("skija-patch");
-        Path extractedLib = tempDir.resolve(nativeLibraryName);
+            // Extract to temp directory
+            Path tempDir = Files.createTempDirectory("skija-patch");
+            Path extractedLib = tempDir.resolve(nativeLibraryName);
 
-        try {
-            Files.copy(libStream, extractedLib);
-            libStream.close();
+            try (InputStream stream = libStream) {
+                Files.copy(stream, extractedLib);
 
-            // Make it executable on Unix-like systems
-            extractedLib.toFile().setReadable(true);
-            extractedLib.toFile().setWritable(true, true);
+                // Make it readable/executable on Unix-like systems
+                extractedLib.toFile().setReadable(true);
+                extractedLib.toFile().setWritable(true, true);
 
-            // Load the library using absolute path
-            String absolutePath = extractedLib.toAbsolutePath().toString();
-            SkijaPatchMod.LOGGER.info("Loading native library from: {}", absolutePath);
+                // Load the library using absolute path
+                String absolutePath = extractedLib.toAbsolutePath().toString();
+                SkijaPatchMod.LOGGER.info("Loading native library from: {}", absolutePath);
 
-            // Use System.load() with absolute path
-            System.load(absolutePath);
+                System.load(absolutePath);
 
-            SkijaPatchMod.LOGGER.info("Successfully loaded skija native library for {}", platform);
-            nativeLoaded = true;
-
-        } finally {
-            libStream.close();
+                SkijaPatchMod.LOGGER.info("Successfully loaded skija native library for {}", platform);
+                nativeLoaded = true;
+            }
         }
     }
 
     private static InputStream findInSkijaJar(Platform platform, String nativeLibraryName) {
-        // Get the classpath
         String classpath = System.getProperty("java.class.path");
         String[] paths = classpath.split(File.pathSeparator);
 
@@ -104,23 +104,34 @@ public class NativeLibraryPreloader {
             if (path.contains("skija")) {
                 try {
                     if (path.endsWith(".jar")) {
-                        JarFile jar = new JarFile(path);
-                        Enumeration<JarEntry> entries = jar.entries();
+                        try (JarFile jar = new JarFile(path)) {
+                            Enumeration<JarEntry> entries = jar.entries();
 
-                        while (entries.hasMoreElements()) {
-                            JarEntry entry = entries.nextElement();
-                            String name = entry.getName();
+                            while (entries.hasMoreElements()) {
+                                JarEntry entry = entries.nextElement();
+                                String name = entry.getName();
 
-                            if (name.contains("native") &&
-                                name.contains(platform.getOs()) &&
-                                name.contains(nativeLibraryName) &&
-                                !entry.isDirectory()) {
+                                if (name.contains("native") &&
+                                    name.contains(platform.getOs()) &&
+                                    name.contains(nativeLibraryName) &&
+                                    !entry.isDirectory()) {
 
-                                SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
-                                return jar.getInputStream(entry);
+                                    SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
+
+                                    // Buffer the entire entry into memory so we can close the JarFile safely
+                                    // (jar.getInputStream depends on the open JarFile)
+                                    try (InputStream entryStream = jar.getInputStream(entry);
+                                         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                                        byte[] buffer = new byte[8192];
+                                        int read;
+                                        while ((read = entryStream.read(buffer)) != -1) {
+                                            baos.write(buffer, 0, read);
+                                        }
+                                        return new ByteArrayInputStream(baos.toByteArray());
+                                    }
+                                }
                             }
                         }
-                        jar.close();
                     }
                 } catch (Exception e) {
                     SkijaPatchMod.LOGGER.debug("Error reading jar {}: {}", path, e.getMessage());
