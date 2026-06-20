@@ -66,12 +66,6 @@ dependencies {
     implementation "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
     include "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
 
-    // Skia - macOS
-    implementation "io.github.humbleui:skija-macos-x64:${skijaVersion}"
-    include "io.github.humbleui:skija-macos-x64:${skijaVersion}"
-    implementation "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
-    include "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
-
     // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
     annotationProcessor "com.google.code.gson:gson:2.10.1"
