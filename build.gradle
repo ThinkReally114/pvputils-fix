@@ -3,13 +3,23 @@ plugins {
     id 'maven-publish'
 }
 
-def pvpUtilsSkijaPatchVersion = "1.0.0"
+def getVersionFromTag() {
+    def githubRef = System.getenv("GITHUB_REF")
+    if (githubRef != null && githubRef.startsWith("refs/tags/")) {
+        def tag = githubRef.substring("refs/tags/".length())
+        if (tag.startsWith("v")) {
+            return tag.substring(1)
+        }
+        return tag
+    }
+    return project.mod_version
+}
 
-version = pvpUtilsSkijaPatchVersion
-group = "com.pvp_utils_skija_patch"
+version = getVersionFromTag()
+group = project.maven_group
 
 base {
-    archivesName = "pvputils-skija-patch-v${pvpUtilsSkijaPatchVersion}"
+    archivesName = "${project.archives_base_name}-v${project.version}"
 }
 
 repositories {
@@ -98,4 +108,15 @@ java {
 
 tasks.withType(AbstractArchiveTask).configureEach {
     archiveVersion.set("")
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+    }
 }
