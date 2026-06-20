@@ -15,7 +15,6 @@ This patch mod includes all platform native libraries and pre-loads the correct 
 - Windows (x64, arm64)
 - Linux (x64, arm64)
 - macOS (x64, arm64)
-- Android (x64, arm64)
 
 ## Usage
 

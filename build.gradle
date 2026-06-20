@@ -72,12 +72,6 @@ dependencies {
     implementation "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
     include "io.github.humbleui:skija-macos-arm64:${skijaVersion}"
 
-    // Skia - Android (PojavLauncher)
-    implementation "io.github.humbleui:skija-android-x64:${skijaVersion}"
-    include "io.github.humbleui:skija-android-x64:${skijaVersion}"
-    implementation "io.github.humbleui:skija-android-arm64:${skijaVersion}"
-    include "io.github.humbleui:skija-android-arm64:${skijaVersion}"
-
     // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
     annotationProcessor "com.google.code.gson:gson:2.10.1"

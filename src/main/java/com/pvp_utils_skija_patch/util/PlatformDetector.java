@@ -11,8 +11,7 @@ public class PlatformDetector {
         LINUX_ARM64("linux", "arm64", "so"),
         MACOS_X64("macos", "x64", "dylib"),
         MACOS_ARM64("macos", "arm64", "dylib"),
-        ANDROID_X64("android", "x64", "so"),
-        ANDROID_ARM64("android", "arm64", "so"),
+
         UNKNOWN("unknown", "unknown", "so");
 
         private final String os;
@@ -42,15 +41,6 @@ public class PlatformDetector {
         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
         String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
 
-        // Check for Android (PojavLauncher)
-        if (isAndroid()) {
-            if (arch.contains("aarch64") || arch.contains("arm64")) {
-                return Platform.ANDROID_ARM64;
-            } else {
-                return Platform.ANDROID_X64;
-            }
-        }
-
         // Detect OS
         boolean isWindows = os.contains("win");
         boolean isMac = os.contains("mac") || os.contains("darwin");
@@ -69,29 +59,6 @@ public class PlatformDetector {
         }
 
         return Platform.UNKNOWN;
-    }
-
-    private static boolean isAndroid() {
-        // Check for Dalvik VM (Android/PojavLauncher)
-        String vmName = System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT);
-        if (vmName.contains("dalvik")) {
-            return true;
-        }
-
-        // Check for Android vendor
-        String vendor = System.getProperty("java.vendor", "").toLowerCase(Locale.ROOT);
-        if (vendor.contains("android")) {
-            return true;
-        }
-
-        // Check for Android system files
-        try {
-            if (new java.io.File("/system/build.prop").exists()) {
-                return true;
-            }
-        } catch (Exception ignored) {}
-
-        return false;
     }
 
     public static boolean isSupportedPlatform() {
