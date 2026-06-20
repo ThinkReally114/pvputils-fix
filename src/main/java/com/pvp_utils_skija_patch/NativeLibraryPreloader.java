@@ -4,7 +4,6 @@ import com.pvp_utils_skija_patch.util.PlatformDetector;
 import com.pvp_utils_skija_patch.util.PlatformDetector.Platform;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Enumeration;
@@ -72,9 +71,8 @@ public class NativeLibraryPreloader {
         Path tempDir = Files.createTempDirectory("skija-patch");
         Path extractedLib = tempDir.resolve(nativeLibraryName);
 
-        try {
-            Files.copy(libStream, extractedLib);
-            libStream.close();
+        try (InputStream stream = libStream) {
+            Files.copy(stream, extractedLib);
 
             // Make it executable on Unix-like systems
             extractedLib.toFile().setReadable(true);
@@ -89,9 +87,6 @@ public class NativeLibraryPreloader {
 
             SkijaPatchMod.LOGGER.info("Successfully loaded skija native library for {}", platform);
             nativeLoaded = true;
-
-        } finally {
-            libStream.close();
         }
     }
 
@@ -102,9 +97,8 @@ public class NativeLibraryPreloader {
 
         for (String path : paths) {
             if (path.contains("skija")) {
-                try {
-                    if (path.endsWith(".jar")) {
-                        JarFile jar = new JarFile(path);
+                try (JarFile jar = path.endsWith(".jar") ? new JarFile(path) : null) {
+                    if (jar != null) {
                         Enumeration<JarEntry> entries = jar.entries();
 
                         while (entries.hasMoreElements()) {
@@ -117,10 +111,18 @@ public class NativeLibraryPreloader {
                                 !entry.isDirectory()) {
 
                                 SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
-                                return jar.getInputStream(entry);
+                                // Buffer into memory so the JarFile can be released safely
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                try (InputStream jarStream = jar.getInputStream(entry)) {
+                                    byte[] buf = new byte[8192];
+                                    int n;
+                                    while ((n = jarStream.read(buf)) > 0) {
+                                        baos.write(buf, 0, n);
+                                    }
+                                }
+                                return new ByteArrayInputStream(baos.toByteArray());
                             }
                         }
-                        jar.close();
                     }
                 } catch (Exception e) {
                     SkijaPatchMod.LOGGER.debug("Error reading jar {}: {}", path, e.getMessage());
