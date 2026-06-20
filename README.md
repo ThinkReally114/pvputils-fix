@@ -1,5 +1,9 @@
 # PVPUtils-fix
 
+<p align="center">
+  <img src="icon.png" width="128" alt="PVPUtils-fix icon">
+</p>
+
 A Fabric client-side mod that patches [PVPUtils](https://modrinth.com/mod/pvp-utils) to support Windows and Linux by pre-loading the correct Skia native library at startup.
 
 ## Problem
