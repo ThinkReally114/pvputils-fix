@@ -74,7 +74,6 @@ public class NativeLibraryPreloader {
 
         try {
             Files.copy(libStream, extractedLib);
-            libStream.close();
 
             // Make it executable on Unix-like systems
             extractedLib.toFile().setReadable(true);
@@ -91,7 +90,12 @@ public class NativeLibraryPreloader {
             nativeLoaded = true;
 
         } finally {
-            libStream.close();
+            if (libStream != null) {
+                try {
+                    libStream.close();
+                } catch (IOException ignored) {
+                }
+            }
         }
     }
 
@@ -102,9 +106,10 @@ public class NativeLibraryPreloader {
 
         for (String path : paths) {
             if (path.contains("skija")) {
+                JarFile jar = null;
                 try {
                     if (path.endsWith(".jar")) {
-                        JarFile jar = new JarFile(path);
+                        jar = new JarFile(path);
                         Enumeration<JarEntry> entries = jar.entries();
 
                         while (entries.hasMoreElements()) {
@@ -117,13 +122,27 @@ public class NativeLibraryPreloader {
                                 !entry.isDirectory()) {
 
                                 SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
-                                return jar.getInputStream(entry);
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                try (InputStream is = jar.getInputStream(entry)) {
+                                    byte[] buf = new byte[8192];
+                                    int n;
+                                    while ((n = is.read(buf)) > 0) {
+                                        baos.write(buf, 0, n);
+                                    }
+                                }
+                                return new java.io.ByteArrayInputStream(baos.toByteArray());
                             }
                         }
-                        jar.close();
                     }
                 } catch (Exception e) {
                     SkijaPatchMod.LOGGER.debug("Error reading jar {}: {}", path, e.getMessage());
+                } finally {
+                    if (jar != null) {
+                        try {
+                            jar.close();
+                        } catch (IOException ignored) {
+                        }
+                    }
                 }
             }
         }

@@ -9,7 +9,8 @@ public class PlatformDetector {
         WINDOWS_ARM64("windows", "arm64", "dll"),
         LINUX_X64("linux", "x64", "so"),
         LINUX_ARM64("linux", "arm64", "so"),
-
+        MACOS_X64("macos", "x64", "dylib"),
+        MACOS_ARM64("macos", "arm64", "dylib"),
 
         UNKNOWN("unknown", "unknown", "so");
 
@@ -43,12 +44,15 @@ public class PlatformDetector {
         // Detect OS
         boolean isWindows = os.contains("win");
         boolean isLinux = os.contains("linux") || os.contains("unix");
+        boolean isMac = os.contains("mac") || os.contains("darwin");
 
         // Detect architecture
         boolean isArm64 = arch.contains("aarch64") || arch.contains("arm64");
 
         if (isWindows) {
             return isArm64 ? Platform.WINDOWS_ARM64 : Platform.WINDOWS_X64;
+        } else if (isMac) {
+            return isArm64 ? Platform.MACOS_ARM64 : Platform.MACOS_X64;
         } else if (isLinux) {
             return isArm64 ? Platform.LINUX_ARM64 : Platform.LINUX_X64;
         }
