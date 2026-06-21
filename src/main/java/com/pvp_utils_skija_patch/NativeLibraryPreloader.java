@@ -19,6 +19,8 @@ public class NativeLibraryPreloader {
     private static final String SKIJA_VERSION = "0.143.16";
     private static final String[] MAVEN_MIRRORS = {
             "https://maven.aliyun.com/repository/central",
+            "https://mirrors.tencent.com/nexus/repository/maven-public",
+            "https://maven.google.com",
             "https://repo1.maven.org/maven2"
     };
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofSeconds(60);
