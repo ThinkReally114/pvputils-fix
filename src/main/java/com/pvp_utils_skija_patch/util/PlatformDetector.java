@@ -34,6 +34,9 @@ public class PlatformDetector {
         }
 
         public String getNativeLibraryName() {
+            if ("so".equals(extension)) {
+                return "libskija.so";
+            }
             return "skija." + extension;
         }
     }
