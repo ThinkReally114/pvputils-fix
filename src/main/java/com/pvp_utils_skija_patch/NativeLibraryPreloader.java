@@ -116,16 +116,20 @@ public class NativeLibraryPreloader {
     private static void extractNativeLib(Path jarPath, Platform platform, Path targetPath) throws IOException {
         try (JarFile jar = new JarFile(jarPath.toFile())) {
             String nativeExt = "." + platform.getExtension();
-            String platformSuffix = platform.getArtifactSuffix();
 
+            SkijaPatchMod.LOGGER.info("JAR 中的文件列表 / JAR contents:");
             var entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                SkijaPatchMod.LOGGER.info("  {}", entry.getName());
+            }
+
+            entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
 
-                if (!entry.isDirectory() &&
-                    name.contains(platformSuffix) &&
-                    name.endsWith(nativeExt)) {
+                if (!entry.isDirectory() && name.endsWith(nativeExt)) {
 
                     SkijaPatchMod.LOGGER.info("正在提取: {} / Extracting: {}", name, name);
 
