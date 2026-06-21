@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "PVPUtils-fix",
   "icon": "icon.png",
-  "description": "Patches PVPUtils to support Windows and Linux by pre-loading the correct Skia native library.",
+  "description": "Patches PVPUtils to support all platforms (Windows/Linux/macOS/Android) by pre-loading the correct Skia native library.",
   "authors": [
     "ThinkReally114"
   ],
