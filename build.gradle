@@ -112,7 +112,7 @@ tasks.register('minifyJar', ProGuardTask) {
         libraryjars(file, filter: '!META-INF/MANIFEST.MF')
     }
 
-    configurationFile(rootProject.file('proguard-rules.pro'))
+    configuration(rootProject.file('proguard-rules.pro'))
 
     dontobfuscate()
     dontoptimize()
