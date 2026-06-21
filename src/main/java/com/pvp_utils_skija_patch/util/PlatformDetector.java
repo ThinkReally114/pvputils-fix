@@ -4,6 +4,8 @@ import java.util.Locale;
 
 public class PlatformDetector {
 
+    private static Platform cachedPlatform;
+
     public enum Platform {
         WINDOWS_X64("windows", "x64", "dll"),
         WINDOWS_ARM64("windows", "arm64", "dll"),
@@ -37,23 +39,27 @@ public class PlatformDetector {
     }
 
     public static Platform detectPlatform() {
+        if (cachedPlatform != null) {
+            return cachedPlatform;
+        }
+
         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
         String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
 
-        // Detect OS
         boolean isWindows = os.contains("win");
         boolean isLinux = os.contains("linux") || os.contains("unix");
 
-        // Detect architecture
         boolean isArm64 = arch.contains("aarch64") || arch.contains("arm64");
 
         if (isWindows) {
-            return isArm64 ? Platform.WINDOWS_ARM64 : Platform.WINDOWS_X64;
+            cachedPlatform = isArm64 ? Platform.WINDOWS_ARM64 : Platform.WINDOWS_X64;
         } else if (isLinux) {
-            return isArm64 ? Platform.LINUX_ARM64 : Platform.LINUX_X64;
+            cachedPlatform = isArm64 ? Platform.LINUX_ARM64 : Platform.LINUX_X64;
+        } else {
+            cachedPlatform = Platform.UNKNOWN;
         }
 
-        return Platform.UNKNOWN;
+        return cachedPlatform;
     }
 
     public static boolean isSupportedPlatform() {

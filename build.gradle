@@ -31,9 +31,6 @@ repositories {
     maven { url 'https://maven.parchmentmc.org/' }
 }
 
-loom {
-}
-
 apply from: "skija.gradle"
 
 dependencies {
@@ -69,11 +66,6 @@ dependencies {
 
     // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
-    annotationProcessor "com.google.code.gson:gson:2.10.1"
-    annotationProcessor "com.google.guava:guava:33.0.0-jre"
-    annotationProcessor "org.ow2.asm:asm:9.6"
-    annotationProcessor "org.ow2.asm:asm-tree:9.6"
-    annotationProcessor "org.ow2.asm:asm-commons:9.6"
 }
 
 processResources {
@@ -104,9 +96,6 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
         }
-    }
-
-    repositories {
     }
 }
 

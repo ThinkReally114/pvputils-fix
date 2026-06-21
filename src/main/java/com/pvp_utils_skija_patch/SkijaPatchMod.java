@@ -12,14 +12,11 @@ public class SkijaPatchMod implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("PVPUtils Skia Patch initialized - pre-loading native libraries");
 
-        // Preload native library immediately on mod initialization
-        if (!NativeLibraryPreloader.isNativeLoaded()) {
-            try {
-                NativeLibraryPreloader.preload();
-                LOGGER.info("PVPUtils Skia Patch: Native library preloaded successfully for platform {}", NativeLibraryPreloader.getCurrentPlatform());
-            } catch (Exception e) {
-                LOGGER.error("PVPUtils Skia Patch: Failed to preload native library", e);
-            }
+        try {
+            NativeLibraryPreloader.preload();
+            LOGGER.info("Native library preloaded successfully for platform {}", NativeLibraryPreloader.getCurrentPlatform());
+        } catch (Exception e) {
+            LOGGER.error("Failed to preload native library", e);
         }
     }
 }
