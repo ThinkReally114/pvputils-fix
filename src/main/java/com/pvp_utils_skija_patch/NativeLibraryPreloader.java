@@ -117,14 +117,7 @@ public class NativeLibraryPreloader {
         try (JarFile jar = new JarFile(jarPath.toFile())) {
             String nativeExt = "." + platform.getExtension();
 
-            SkijaPatchMod.LOGGER.info("JAR 中的文件列表 / JAR contents:");
             var entries = jar.entries();
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                SkijaPatchMod.LOGGER.info("  {}", entry.getName());
-            }
-
-            entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
