@@ -4,16 +4,24 @@ import com.pvp_utils_skija_patch.util.PlatformDetector;
 import com.pvp_utils_skija_patch.util.PlatformDetector.Platform;
 
 import java.io.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Enumeration;
+import java.time.Duration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class NativeLibraryPreloader {
 
+    private static final String SKIJA_VERSION = "0.143.16";
+    private static final String MAVEN_BASE = "https://repo1.maven.org/maven2/io/github/humbleui";
+    private static final Duration DOWNLOAD_TIMEOUT = Duration.ofSeconds(60);
+
     private static boolean nativeLoaded = false;
-    private static Path tempDir;
+    private static Path cacheDir;
 
     public static boolean isNativeLoaded() {
         return nativeLoaded;
@@ -26,107 +34,121 @@ public class NativeLibraryPreloader {
 
         Platform platform = PlatformDetector.detectPlatform();
         if (platform == Platform.UNKNOWN) {
-            SkijaPatchMod.LOGGER.warn("Unsupported platform, cannot preload native library");
+            SkijaPatchMod.LOGGER.warn("不支持的平台，无法预加载原生库 / Unsupported platform, cannot preload native library");
             return;
         }
 
-        String platformName = platform.getArtifactSuffix();
-        String nativeLibraryName = platform.getNativeLibraryName();
+        cacheDir = getCacheDir();
+        Path cachedLib = cacheDir.resolve(platform.getArtifactSuffix()).resolve(platform.getNativeLibraryName());
 
-        SkijaPatchMod.LOGGER.info("Detected platform: {} (looking for {})", platform, platformName);
+        if (Files.exists(cachedLib)) {
+            SkijaPatchMod.LOGGER.info("找到已缓存的原生库: {} / Found cached native library: {}", cachedLib, cachedLib);
+            loadLibrary(cachedLib);
+            return;
+        }
 
-        String resourcePath = "/skija/native/" + platformName + "/" + nativeLibraryName;
+        SkijaPatchMod.LOGGER.info("未找到缓存，正在为平台 {} 下载原生库... / No cached library found, downloading for platform: {}", platform, platform);
+        downloadAndExtract(platform, cachedLib);
+        loadLibrary(cachedLib);
+    }
 
-        InputStream libStream = NativeLibraryPreloader.class.getResourceAsStream(resourcePath);
+    private static Path getCacheDir() {
+        String userHome = System.getProperty("user.home", ".");
+        return Path.of(userHome, ".skija-natives", SKIJA_VERSION);
+    }
 
-        if (libStream == null) {
-            String[] alternativePaths = {
-                "/native/" + platformName + "/" + nativeLibraryName,
-                "/META-INF/resources/native/" + platformName + "/" + nativeLibraryName,
-                "/io/github/humbleui/skija/native/" + platformName + "/" + nativeLibraryName
-            };
+    private static void downloadAndExtract(Platform platform, Path targetPath) throws Exception {
+        String artifactName = "skija-" + platform.getArtifactSuffix();
+        String jarUrl = String.format("%s/%s/%s/%s-%s.jar",
+                MAVEN_BASE, artifactName, SKIJA_VERSION, artifactName, SKIJA_VERSION);
 
-            for (String altPath : alternativePaths) {
-                libStream = NativeLibraryPreloader.class.getResourceAsStream(altPath);
-                if (libStream != null) {
-                    resourcePath = altPath;
-                    break;
-                }
+        SkijaPatchMod.LOGGER.info("正在下载: {} / Downloading: {}", jarUrl, jarUrl);
+
+        Path tempDir = Files.createTempDirectory("skija-download-");
+        Path tempJar = tempDir.resolve(artifactName + ".jar");
+
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(DOWNLOAD_TIMEOUT)
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(jarUrl))
+                    .timeout(DOWNLOAD_TIMEOUT)
+                    .GET()
+                    .build();
+
+            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+            if (response.statusCode() != 200) {
+                throw new IOException("下载失败，HTTP 状态码: " + response.statusCode() + " / Download failed with HTTP " + response.statusCode() + " for " + jarUrl);
             }
-        }
 
-        if (libStream == null) {
-            libStream = findInSkijaJar(platform, nativeLibraryName);
-        }
+            try (InputStream in = response.body()) {
+                Files.copy(in, tempJar);
+            }
 
-        if (libStream == null) {
-            SkijaPatchMod.LOGGER.warn("Could not find native library for platform {}", platform);
-            return;
-        }
+            SkijaPatchMod.LOGGER.info("下载完成，正在提取原生库... / Download complete, extracting native library...");
 
-        tempDir = Files.createTempDirectory("skija-patch");
-        Path extractedLib = tempDir.resolve(nativeLibraryName);
+            extractNativeLib(tempJar, platform, targetPath);
 
-        try (InputStream in = libStream) {
-            Files.copy(in, extractedLib);
-
-            extractedLib.toFile().setReadable(true);
-            extractedLib.toFile().setWritable(true, true);
-
-            String absolutePath = extractedLib.toAbsolutePath().toString();
-            SkijaPatchMod.LOGGER.info("Loading native library from: {}", absolutePath);
-
-            System.load(absolutePath);
-
-            SkijaPatchMod.LOGGER.info("Successfully loaded skija native library for {}", platform);
-            nativeLoaded = true;
         } finally {
-            cleanupTempDir();
+            cleanupTempDir(tempDir);
         }
     }
 
-    private static void cleanupTempDir() {
-        if (tempDir != null) {
-            try {
-                Files.walk(tempDir)
+    private static void extractNativeLib(Path jarPath, Platform platform, Path targetPath) throws IOException {
+        try (JarFile jar = new JarFile(jarPath.toFile())) {
+            String nativeName = platform.getNativeLibraryName();
+            String platformSuffix = platform.getArtifactSuffix();
+
+            var entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String name = entry.getName();
+
+                if (!entry.isDirectory() &&
+                    name.contains("native") &&
+                    name.contains(platformSuffix) &&
+                    name.endsWith(nativeName)) {
+
+                    SkijaPatchMod.LOGGER.info("正在提取: {} / Extracting: {}", name, name);
+
+                    Files.createDirectories(targetPath.getParent());
+
+                    try (InputStream in = jar.getInputStream(entry)) {
+                        Files.copy(in, targetPath);
+                    }
+                    return;
+                }
+            }
+
+            throw new IOException("下载的 JAR 中未找到该平台的原生库: " + platform + " / Native library not found in downloaded JAR for platform: " + platform);
+        }
+    }
+
+    private static void loadLibrary(Path libPath) {
+        try {
+            String absolutePath = libPath.toAbsolutePath().toString();
+            SkijaPatchMod.LOGGER.info("正在加载原生库: {} / Loading native library from: {}", absolutePath, absolutePath);
+            System.load(absolutePath);
+            nativeLoaded = true;
+            SkijaPatchMod.LOGGER.info("原生库加载成功 / Successfully loaded skija native library");
+        } catch (UnsatisfiedLinkError e) {
+            SkijaPatchMod.LOGGER.error("原生库加载失败: {} / Failed to load native library: {}", e.getMessage(), e.getMessage());
+            throw e;
+        }
+    }
+
+    private static void cleanupTempDir(Path tempDir) {
+        try {
+            Files.walk(tempDir)
                     .sorted((a, b) -> b.compareTo(a))
                     .forEach(p -> {
                         try { Files.deleteIfExists(p); } catch (IOException ignored) {}
                     });
-            } catch (IOException ignored) {}
-            tempDir = null;
-        }
-    }
-
-    private static InputStream findInSkijaJar(Platform platform, String nativeLibraryName) {
-        String classpath = System.getProperty("java.class.path");
-        String[] paths = classpath.split(File.pathSeparator);
-
-        for (String path : paths) {
-            if (path.contains("skija") && path.endsWith(".jar")) {
-                try (JarFile jar = new JarFile(path)) {
-                    Enumeration<JarEntry> entries = jar.entries();
-
-                    while (entries.hasMoreElements()) {
-                        JarEntry entry = entries.nextElement();
-                        String name = entry.getName();
-
-                        if (name.contains("native") &&
-                            name.contains(platform.getOs()) &&
-                            name.contains(nativeLibraryName) &&
-                            !entry.isDirectory()) {
-
-                            SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
-                            byte[] data = jar.getInputStream(entry).readAllBytes();
-                            return new ByteArrayInputStream(data);
-                        }
-                    }
-                } catch (Exception e) {
-                    SkijaPatchMod.LOGGER.debug("Error reading jar {}: {}", path, e.getMessage());
-                }
-            }
-        }
-        return null;
+        } catch (IOException ignored) {}
     }
 
     public static String getCurrentPlatform() {

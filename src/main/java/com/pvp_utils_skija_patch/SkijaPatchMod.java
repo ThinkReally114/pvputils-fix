@@ -10,13 +10,13 @@ public class SkijaPatchMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("PVPUtils Skia Patch initialized - pre-loading native libraries");
+        LOGGER.info("PVPUtils Skia Patch 已初始化 - 正在预加载原生库 / PVPUtils Skia Patch initialized - pre-loading native libraries");
 
         try {
             NativeLibraryPreloader.preload();
-            LOGGER.info("Native library preloaded successfully for platform {}", NativeLibraryPreloader.getCurrentPlatform());
+            LOGGER.info("原生库预加载成功，平台: {} / Native library preloaded successfully for platform {}", NativeLibraryPreloader.getCurrentPlatform(), NativeLibraryPreloader.getCurrentPlatform());
         } catch (Exception e) {
-            LOGGER.error("Failed to preload native library", e);
+            LOGGER.error("原生库预加载失败 / Failed to preload native library", e);
         }
     }
 }

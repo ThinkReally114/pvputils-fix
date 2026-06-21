@@ -15,7 +15,7 @@ public class SkijaLibraryMixin {
         try {
             NativeLibraryPreloader.preload();
         } catch (Exception e) {
-            SkijaPatchMod.LOGGER.warn("Mixin: Failed to preload native library: {}", e.getMessage());
+            SkijaPatchMod.LOGGER.warn("Mixin: 原生库预加载失败: {} / Failed to preload native library: {}", e.getMessage(), e.getMessage());
         }
     }
 
@@ -24,7 +24,7 @@ public class SkijaLibraryMixin {
         try {
             NativeLibraryPreloader.preload();
         } catch (Exception e) {
-            SkijaPatchMod.LOGGER.warn("Mixin staticLoad: Preload check failed: {}", e.getMessage());
+            SkijaPatchMod.LOGGER.warn("Mixin staticLoad: 预加载检查失败: {} / Preload check failed: {}", e.getMessage(), e.getMessage());
         }
     }
 }

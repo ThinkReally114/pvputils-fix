@@ -1,3 +1,9 @@
+buildscript {
+    dependencies {
+        classpath 'com.guardsuards:proguard-base:7.5.1'
+    }
+}
+
 plugins {
     id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
@@ -48,21 +54,11 @@ dependencies {
     // GSON for JSON parsing
     implementation "com.google.code.gson:gson:2.10.1"
 
-    // Skia - shared (required by all platforms)
+    // Skia - shared (Java API classes only)
     implementation "io.github.humbleui:skija-shared:${skijaVersion}"
     include "io.github.humbleui:skija-shared:${skijaVersion}"
 
-    // Skia - Windows
-    implementation "io.github.humbleui:skija-windows-x64:${skijaVersion}"
-    include "io.github.humbleui:skija-windows-x64:${skijaVersion}"
-    implementation "io.github.humbleui:skija-windows-arm64:${skijaVersion}"
-    include "io.github.humbleui:skija-windows-arm64:${skijaVersion}"
-
-    // Skia - Linux
-    implementation "io.github.humbleui:skija-linux-x64:${skijaVersion}"
-    include "io.github.humbleui:skija-linux-x64:${skijaVersion}"
-    implementation "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
-    include "io.github.humbleui:skija-linux-arm64:${skijaVersion}"
+    // Skia natives are NOT bundled - downloaded at runtime based on platform
 
     // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
@@ -93,6 +89,42 @@ java {
 tasks.withType(AbstractArchiveTask).configureEach {
     archiveVersion.set("")
 }
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+import proguard.gradle.ProGuardTask
+
+tasks.register('minifyJar', ProGuardTask) {
+    dependsOn remapJar
+
+    def inputJar = remapJar.archiveFile.get().asFile
+    def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
+
+    injars(inputJar)
+    outjars(outputJar)
+
+    configurations.runtimeClasspath.each { File file ->
+        libraryjars(file, filter: '!META-INF/MANIFEST.MF')
+    }
+
+    configurationFile(rootProject.file('proguard-rules.pro'))
+
+    dontobfuscate()
+    dontoptimize()
+    dontwarn()
+    shrink()
+
+    doLast {
+        if (outputJar.exists()) {
+            if (inputJar.exists()) inputJar.delete()
+            outputJar.renameTo(inputJar)
+        }
+    }
+}
+
+build.dependsOn minifyJar
 
 publishing {
     publications {
