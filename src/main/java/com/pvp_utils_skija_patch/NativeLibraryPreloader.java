@@ -65,13 +65,24 @@ public class NativeLibraryPreloader {
     private static void initSkijaNatively() throws Exception {
         Class<?> libraryClass = Class.forName("io.github.humbleui.skija.impl.Library");
 
-        Field loadedField = libraryClass.getDeclaredField("loaded");
-        loadedField.setAccessible(true);
-        loadedField.setBoolean(null, true);
+        for (Field f : libraryClass.getDeclaredFields()) {
+            if (f.getType() == boolean.class && java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                f.setAccessible(true);
+                f.setBoolean(null, true);
+                SkijaPatchMod.LOGGER.info("设置字段 {} = true / Set field {} = true", f.getName(), f.getName());
+            }
+        }
 
-        Method nInit = libraryClass.getDeclaredMethod("_nInit");
-        nInit.setAccessible(true);
-        nInit.invoke(null);
+        for (Method m : libraryClass.getDeclaredMethods()) {
+            if (m.getParameterCount() == 0 && m.getName().contains("Init")) {
+                m.setAccessible(true);
+                m.invoke(null);
+                SkijaPatchMod.LOGGER.info("调用初始化方法: {} / Called init method: {}", m.getName(), m.getName());
+                return;
+            }
+        }
+
+        SkijaPatchMod.LOGGER.warn("未找到 Skia 初始化方法 / Skia init method not found");
     }
 
     private static Path getCacheDir() {
