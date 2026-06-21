@@ -76,6 +76,7 @@ public class NativeLibraryPreloader {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(jarUrl))
                     .timeout(DOWNLOAD_TIMEOUT)
+                    .header("User-Agent", "PVPUtils-Skija-Patch/" + SKIJA_VERSION)
                     .GET()
                     .build();
 
