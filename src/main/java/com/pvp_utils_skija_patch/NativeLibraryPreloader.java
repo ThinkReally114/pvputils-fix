@@ -72,55 +72,48 @@ public class NativeLibraryPreloader {
         Path tempDir = Files.createTempDirectory("skija-patch");
         Path extractedLib = tempDir.resolve(nativeLibraryName);
 
-        try {
-            Files.copy(libStream, extractedLib);
-            libStream.close();
+        tempDir.toFile().deleteOnExit();
+        extractedLib.toFile().deleteOnExit();
 
-            // Make it executable on Unix-like systems
+        try (libStream) {
+            Files.copy(libStream, extractedLib);
+
             extractedLib.toFile().setReadable(true);
             extractedLib.toFile().setWritable(true, true);
+            extractedLib.toFile().setExecutable(true, true);
 
-            // Load the library using absolute path
             String absolutePath = extractedLib.toAbsolutePath().toString();
             SkijaPatchMod.LOGGER.info("Loading native library from: {}", absolutePath);
 
-            // Use System.load() with absolute path
             System.load(absolutePath);
 
             SkijaPatchMod.LOGGER.info("Successfully loaded skija native library for {}", platform);
             nativeLoaded = true;
-
-        } finally {
-            libStream.close();
         }
     }
 
     private static InputStream findInSkijaJar(Platform platform, String nativeLibraryName) {
-        // Get the classpath
         String classpath = System.getProperty("java.class.path");
         String[] paths = classpath.split(File.pathSeparator);
 
         for (String path : paths) {
-            if (path.contains("skija")) {
-                try {
-                    if (path.endsWith(".jar")) {
-                        JarFile jar = new JarFile(path);
-                        Enumeration<JarEntry> entries = jar.entries();
+            if (path.contains("skija") && path.endsWith(".jar")) {
+                try (JarFile jar = new JarFile(path)) {
+                    Enumeration<JarEntry> entries = jar.entries();
 
-                        while (entries.hasMoreElements()) {
-                            JarEntry entry = entries.nextElement();
-                            String name = entry.getName();
+                    while (entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        String name = entry.getName();
 
-                            if (name.contains("native") &&
-                                name.contains(platform.getOs()) &&
-                                name.contains(nativeLibraryName) &&
-                                !entry.isDirectory()) {
+                        if (name.contains("native") &&
+                            name.contains(platform.getOs()) &&
+                            name.contains(nativeLibraryName) &&
+                            !entry.isDirectory()) {
 
-                                SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
-                                return jar.getInputStream(entry);
-                            }
+                            SkijaPatchMod.LOGGER.info("Found native library in jar: {}", name);
+                            byte[] bytes = jar.getInputStream(entry).readAllBytes();
+                            return new ByteArrayInputStream(bytes);
                         }
-                        jar.close();
                     }
                 } catch (Exception e) {
                     SkijaPatchMod.LOGGER.debug("Error reading jar {}: {}", path, e.getMessage());
