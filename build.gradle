@@ -114,10 +114,9 @@ tasks.register('minifyJar', ProGuardTask) {
 
     configuration(rootProject.file('proguard-rules.pro'))
 
-    obfuscate = false
-    optimize = false
-    shrink = true
-    dontwarn = true
+    dontobfuscate()
+    dontoptimize()
+    dontwarn()
 
     doLast {
         if (outputJar.exists()) {
