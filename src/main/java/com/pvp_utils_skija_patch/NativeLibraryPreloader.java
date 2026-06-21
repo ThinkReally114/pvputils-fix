@@ -69,26 +69,16 @@ public class NativeLibraryPreloader {
             if (f.getType() == boolean.class && java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
                 f.setAccessible(true);
                 f.setBoolean(null, true);
-                SkijaPatchMod.LOGGER.info("设置字段 {} = true / Set field {} = true", f.getName(), f.getName());
             }
-        }
-
-        for (Method m : libraryClass.getDeclaredMethods()) {
-            SkijaPatchMod.LOGGER.info("Library 方法: {} (params={}, native={}) / Library method: {} (params={}, native={})",
-                    m.getName(), m.getParameterCount(), java.lang.reflect.Modifier.isNative(m.getModifiers()),
-                    m.getName(), m.getParameterCount(), java.lang.reflect.Modifier.isNative(m.getModifiers()));
         }
 
         for (Method m : libraryClass.getDeclaredMethods()) {
             if (m.getParameterCount() == 0 && java.lang.reflect.Modifier.isNative(m.getModifiers())) {
                 m.setAccessible(true);
                 m.invoke(null);
-                SkijaPatchMod.LOGGER.info("调用原生初始化方法: {} / Called native init method: {}", m.getName(), m.getName());
-                return;
+                break;
             }
         }
-
-        SkijaPatchMod.LOGGER.warn("未找到 Skia 原生初始化方法 / Skia native init method not found");
     }
 
     private static Path getCacheDir() {
