@@ -102,23 +102,26 @@ import proguard.gradle.ProGuardTask
 tasks.register('minifyJar', ProGuardTask) {
     dependsOn remapJar
 
-    def inputJar = remapJar.archiveFile.get().asFile
-    def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
-
-    injars(inputJar)
-    outjars(outputJar)
-
-    configurations.runtimeClasspath.each { File file ->
-        libraryjars(file, filter: '!META-INF/MANIFEST.MF')
-    }
-
     configuration(rootProject.file('proguard-rules.pro'))
-
     dontobfuscate()
     dontoptimize()
     dontwarn()
 
+    doFirst {
+        def inputJar = remapJar.archiveFile.get().asFile
+        def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
+
+        injars(inputJar)
+        outjars(outputJar)
+
+        configurations.runtimeClasspath.each { File file ->
+            libraryjars(file, filter: '!META-INF/MANIFEST.MF')
+        }
+    }
+
     doLast {
+        def inputJar = remapJar.archiveFile.get().asFile
+        def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
         if (outputJar.exists()) {
             if (inputJar.exists()) inputJar.delete()
             outputJar.renameTo(inputJar)
