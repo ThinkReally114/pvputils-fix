@@ -17,7 +17,10 @@ import java.util.jar.JarFile;
 public class NativeLibraryPreloader {
 
     private static final String SKIJA_VERSION = "0.143.16";
-    private static final String MAVEN_BASE = "https://repo1.maven.org/maven2/io/github/humbleui";
+    private static final String[] MAVEN_MIRRORS = {
+            "https://maven.aliyun.com/repository/central",
+            "https://repo1.maven.org/maven2"
+    };
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofSeconds(60);
 
     private static boolean nativeLoaded = false;
@@ -59,44 +62,53 @@ public class NativeLibraryPreloader {
 
     private static void downloadAndExtract(Platform platform, Path targetPath) throws Exception {
         String artifactName = "skija-" + platform.getArtifactSuffix();
-        String jarUrl = String.format("%s/%s/%s/%s-%s.jar",
-                MAVEN_BASE, artifactName, SKIJA_VERSION, artifactName, SKIJA_VERSION);
-
-        SkijaPatchMod.LOGGER.info("正在下载: {} / Downloading: {}", jarUrl, jarUrl);
+        String artifactPath = String.format("/io/github/humbleui/%s/%s/%s-%s.jar",
+                artifactName, SKIJA_VERSION, artifactName, SKIJA_VERSION);
 
         Path tempDir = Files.createTempDirectory("skija-download-");
         Path tempJar = tempDir.resolve(artifactName + ".jar");
 
-        try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(DOWNLOAD_TIMEOUT)
-                    .followRedirects(HttpClient.Redirect.NORMAL)
-                    .build();
+        IOException lastException = null;
+        for (String mirror : MAVEN_MIRRORS) {
+            String jarUrl = mirror + artifactPath;
+            SkijaPatchMod.LOGGER.info("正在下载: {} / Downloading: {}", jarUrl, jarUrl);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(jarUrl))
-                    .timeout(DOWNLOAD_TIMEOUT)
-                    .header("User-Agent", "PVPUtils-Skija-Patch/" + SKIJA_VERSION)
-                    .GET()
-                    .build();
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(DOWNLOAD_TIMEOUT)
+                        .followRedirects(HttpClient.Redirect.NORMAL)
+                        .build();
 
-            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(jarUrl))
+                        .timeout(DOWNLOAD_TIMEOUT)
+                        .header("User-Agent", "PVPUtils-Skija-Patch/" + SKIJA_VERSION)
+                        .header("Accept", "application/octet-stream,*/*")
+                        .GET()
+                        .build();
 
-            if (response.statusCode() != 200) {
-                throw new IOException("下载失败，HTTP 状态码: " + response.statusCode() + " / Download failed with HTTP " + response.statusCode() + " for " + jarUrl);
+                HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+                if (response.statusCode() == 200) {
+                    try (InputStream in = response.body()) {
+                        Files.copy(in, tempJar);
+                    }
+                    SkijaPatchMod.LOGGER.info("下载完成，正在提取原生库... / Download complete, extracting native library...");
+                    extractNativeLib(tempJar, platform, targetPath);
+                    return;
+                }
+
+                lastException = new IOException("HTTP " + response.statusCode());
+                SkijaPatchMod.LOGGER.warn("下载失败 ({}): {} / Download failed ({}): {}", jarUrl, response.statusCode(), jarUrl, response.statusCode());
+
+            } catch (Exception e) {
+                lastException = new IOException(e.getMessage(), e);
+                SkijaPatchMod.LOGGER.warn("下载失败: {} / Download failed: {} - {}", jarUrl, jarUrl, e.getMessage());
             }
-
-            try (InputStream in = response.body()) {
-                Files.copy(in, tempJar);
-            }
-
-            SkijaPatchMod.LOGGER.info("下载完成，正在提取原生库... / Download complete, extracting native library...");
-
-            extractNativeLib(tempJar, platform, targetPath);
-
-        } finally {
-            cleanupTempDir(tempDir);
         }
+
+        cleanupTempDir(tempDir);
+        throw new IOException("所有镜像源下载失败 / All mirrors failed", lastException);
     }
 
     private static void extractNativeLib(Path jarPath, Platform platform, Path targetPath) throws IOException {
