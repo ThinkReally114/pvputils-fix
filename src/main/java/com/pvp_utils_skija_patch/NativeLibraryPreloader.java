@@ -233,13 +233,22 @@ public class NativeLibraryPreloader {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
 
-                if (!entry.isDirectory() && name.equals(expectedName)) {
+                if (!entry.isDirectory() && name.endsWith(expectedName)) {
                     SkijaPatchMod.LOGGER.info("正在提取: {} / Extracting: {}", name, name);
                     Files.createDirectories(targetPath.getParent());
                     try (InputStream in = jar.getInputStream(entry)) {
                         Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
                     }
                     return;
+                }
+            }
+
+            SkijaPatchMod.LOGGER.warn("JAR 内容: / JAR contents:");
+            var allEntries = jar.entries();
+            while (allEntries.hasMoreElements()) {
+                JarEntry e = allEntries.nextElement();
+                if (!e.isDirectory()) {
+                    SkijaPatchMod.LOGGER.warn("  - {}", e.getName());
                 }
             }
 

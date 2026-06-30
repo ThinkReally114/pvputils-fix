@@ -58,7 +58,17 @@ public class PlatformDetector {
         boolean isArm64 = arch.contains("aarch64") || arch.contains("arm64");
 
         boolean isAndroid = os.contains("android")
-                || System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT).contains("dalvik");
+                || System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT).contains("dalvik")
+                || System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT).contains("art")
+                || System.getProperty("java.vm.vendor", "").toLowerCase(Locale.ROOT).contains("android")
+                || System.getProperty("android.os.Build$VERSION.SDK_INT") != null;
+
+        if (!isAndroid) {
+            try {
+                Class.forName("android.os.Build");
+                isAndroid = true;
+            } catch (ClassNotFoundException ignored) {}
+        }
 
         boolean isMac = os.contains("mac");
 
