@@ -10,7 +10,7 @@ buildscript {
 plugins {
     id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
-    id 'com.modrinth.minotaur' version '2.+'
+    id 'com.modrinth.minotaur' version '2.8.5'
 }
 
 def getVersionFromTag() {
@@ -70,10 +70,15 @@ dependencies {
 }
 
 processResources {
+    dependsOn generateChecksums
     inputs.property "version", project.version
+    inputs.property "skijaVersion", skijaVersion
 
     filesMatching("fabric.mod.json") {
         expand "version": inputs.properties.version
+    }
+    filesMatching("skija-version.properties") {
+        expand "skijaVersion": inputs.properties.skijaVersion
     }
 }
 
@@ -95,6 +100,49 @@ jar {
 }
 
 import proguard.gradle.ProGuardTask
+
+def platforms = ["windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "macos-x64", "macos-arm64", "android-x64", "android-arm64"]
+
+tasks.register('generateChecksums') {
+    doLast {
+        def checksumsFile = file("src/main/resources/checksums.properties")
+        def props = new Properties()
+
+        platforms.each { platform ->
+            def artifactName = "skija-${platform}"
+            def jarUrl = "https://repo1.maven.org/maven2/io/github/humbleui/${artifactName}/${skijaVersion}/${artifactName}-${skijaVersion}.jar"
+
+            try {
+                def tempFile = File.createTempFile("skija-checksum-", ".jar")
+                try {
+                    new URL(jarUrl).withInputStream { input ->
+                        tempFile.bytes = input.bytes
+                    }
+                    def digest = java.security.MessageDigest.getInstance("SHA-256")
+                    tempFile.withInputStream { input ->
+                        def buffer = new byte[8192]
+                        int read
+                        while ((read = input.read(buffer)) != -1) {
+                            digest.update(buffer, 0, read)
+                        }
+                    }
+                    def hash = digest.digest().encodeHex().toString()
+                    props.setProperty(platform, hash)
+                    println("Checksum ${platform}: ${hash}")
+                } finally {
+                    tempFile.delete()
+                }
+            } catch (Exception e) {
+                println("Warning: failed to compute checksum for ${platform}: ${e.message}")
+            }
+        }
+
+        checksumsFile.withOutputStream { out ->
+            props.store(out, "Skija native library SHA-256 checksums")
+        }
+        println("Checksums written to ${checksumsFile}")
+    }
+}
 
 tasks.register('minifyJar', ProGuardTask) {
     dependsOn remapJar
@@ -141,11 +189,10 @@ modrinth {
     projectId = "pvputils-fix"
     versionNumber = project.version
     versionName = "v${project.version}"
-    uploadFile = project.jar
+    uploadFile = remapJar
     gameVersions = [project.minecraft_version]
     loaders = ["fabric"]
     dependencies {
         required.project "fabric-api"
-        required.project "pvp-utils"
     }
 }

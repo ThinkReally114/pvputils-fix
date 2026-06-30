@@ -1,5 +1,5 @@
 {
-  "required": true,
+  "required": false,
   "minVersion": "0.8",
   "package": "com.pvp_utils_skija_patch.mixin",
   "compatibilityLevel": "JAVA_21",

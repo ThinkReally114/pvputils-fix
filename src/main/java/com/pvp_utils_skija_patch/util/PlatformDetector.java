@@ -4,14 +4,17 @@ import java.util.Locale;
 
 public class PlatformDetector {
 
-    private static Platform cachedPlatform;
+    private static volatile Platform cachedPlatform;
 
     public enum Platform {
         WINDOWS_X64("windows", "x64", "dll"),
         WINDOWS_ARM64("windows", "arm64", "dll"),
         LINUX_X64("linux", "x64", "so"),
         LINUX_ARM64("linux", "arm64", "so"),
-
+        MACOS_X64("macos", "x64", "dylib"),
+        MACOS_ARM64("macos", "arm64", "dylib"),
+        ANDROID_X64("android", "x64", "so"),
+        ANDROID_ARM64("android", "arm64", "so"),
 
         UNKNOWN("unknown", "unknown", "so");
 
@@ -37,6 +40,9 @@ public class PlatformDetector {
             if ("so".equals(extension)) {
                 return "libskija.so";
             }
+            if ("dylib".equals(extension)) {
+                return "libskija.dylib";
+            }
             return "skija." + extension;
         }
     }
@@ -49,12 +55,22 @@ public class PlatformDetector {
         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
         String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
 
-        boolean isWindows = os.contains("win");
-        boolean isLinux = os.contains("linux") || os.contains("unix");
-
         boolean isArm64 = arch.contains("aarch64") || arch.contains("arm64");
 
-        if (isWindows) {
+        boolean isAndroid = os.contains("android")
+                || System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT).contains("dalvik");
+
+        boolean isMac = os.contains("mac");
+
+        boolean isWindows = os.contains("win");
+
+        boolean isLinux = os.contains("linux");
+
+        if (isAndroid) {
+            cachedPlatform = isArm64 ? Platform.ANDROID_ARM64 : Platform.ANDROID_X64;
+        } else if (isMac) {
+            cachedPlatform = isArm64 ? Platform.MACOS_ARM64 : Platform.MACOS_X64;
+        } else if (isWindows) {
             cachedPlatform = isArm64 ? Platform.WINDOWS_ARM64 : Platform.WINDOWS_X64;
         } else if (isLinux) {
             cachedPlatform = isArm64 ? Platform.LINUX_ARM64 : Platform.LINUX_X64;

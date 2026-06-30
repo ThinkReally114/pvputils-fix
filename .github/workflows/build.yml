@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     tags:
       - 'v*'
+      - 'ver*'
       - '[0-9]*'
   pull_request:
     branches: [ main ]
@@ -25,12 +26,16 @@ jobs:
         with:
           java-version: 21
           distribution: 'temurin'
+          cache: gradle
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
       - name: Build
         run: ./gradlew build
+
+      - name: List build artifacts
+        run: ls -la build/libs/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -45,6 +50,7 @@ jobs:
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           VERSION=${TAG_NAME#v}
+          VERSION=${VERSION#er}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Version extracted: $VERSION"

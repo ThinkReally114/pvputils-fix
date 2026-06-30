@@ -14,9 +14,14 @@ public class SkijaPatchMod implements ClientModInitializer {
 
         try {
             NativeLibraryPreloader.preload();
-            LOGGER.info("原生库预加载成功，平台: {} / Native library preloaded successfully for platform {}", NativeLibraryPreloader.getCurrentPlatform(), NativeLibraryPreloader.getCurrentPlatform());
+            if (NativeLibraryPreloader.isNativeLoaded()) {
+                LOGGER.info("原生库预加载成功，平台: {} / Native library preloaded successfully for platform {}",
+                        NativeLibraryPreloader.getCurrentPlatform(), NativeLibraryPreloader.getCurrentPlatform());
+            } else {
+                LOGGER.warn("原生库预加载未完成，平台可能不受支持 / Native library preload did not complete, platform may be unsupported");
+            }
         } catch (Exception e) {
-            LOGGER.error("原生库预加载失败 / Failed to preload native library", e);
+            LOGGER.error("原生库预加载失败，Skia 功能将不可用 / Failed to preload native library, Skia features will be unavailable", e);
         }
     }
 }
