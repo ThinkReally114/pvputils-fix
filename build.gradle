@@ -70,7 +70,7 @@ dependencies {
 }
 
 processResources {
-    dependsOn generateChecksums
+    dependsOn tasks.named('generateChecksums')
     inputs.property "version", project.version
     inputs.property "skijaVersion", skijaVersion
 
