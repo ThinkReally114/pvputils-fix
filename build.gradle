@@ -42,63 +42,6 @@ repositories {
 
 apply from: "skija.gradle"
 
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.layered {
-        officialMojangMappings()
-    }
-
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-    // GSON for JSON parsing
-    implementation "com.google.code.gson:gson:2.10.1"
-
-    // Skia - shared (Java API classes only)
-    implementation "io.github.humbleui:skija-shared:${skijaVersion}"
-    include "io.github.humbleui:skija-shared:${skijaVersion}"
-
-    // Skia natives are NOT bundled - downloaded at runtime based on platform
-
-    // Annotations for mixin
-    annotationProcessor "org.spongepowered:mixin:0.8.5"
-    annotationProcessor "com.google.code.gson:gson:2.10.1"
-    annotationProcessor "com.google.guava:guava:33.0.0-jre"
-    annotationProcessor "org.ow2.asm:asm:9.6"
-    annotationProcessor "org.ow2.asm:asm-tree:9.6"
-    annotationProcessor "org.ow2.asm:asm-commons:9.6"
-}
-
-processResources {
-    dependsOn tasks.named('generateChecksums')
-    inputs.property "version", project.version
-    inputs.property "skijaVersion", skijaVersion
-
-    filesMatching("fabric.mod.json") {
-        expand "version": inputs.properties.version
-    }
-    filesMatching("skija-version.properties") {
-        expand "skijaVersion": inputs.properties.skijaVersion
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
-tasks.withType(AbstractArchiveTask).configureEach {
-    archiveVersion.set("")
-}
-
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 import proguard.gradle.ProGuardTask
 
 def platforms = ["windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "macos-x64", "macos-arm64", "android-x64", "android-arm64"]
@@ -142,6 +85,63 @@ tasks.register('generateChecksums') {
         }
         println("Checksums written to ${checksumsFile}")
     }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.layered {
+        officialMojangMappings()
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // GSON for JSON parsing
+    implementation "com.google.code.gson:gson:2.10.1"
+
+    // Skia - shared (Java API classes only)
+    implementation "io.github.humbleui:skija-shared:${skijaVersion}"
+    include "io.github.humbleui:skija-shared:${skijaVersion}"
+
+    // Skia natives are NOT bundled - downloaded at runtime based on platform
+
+    // Annotations for mixin
+    annotationProcessor "org.spongepowered:mixin:0.8.5"
+    annotationProcessor "com.google.code.gson:gson:2.10.1"
+    annotationProcessor "com.google.guava:guava:33.0.0-jre"
+    annotationProcessor "org.ow2.asm:asm:9.6"
+    annotationProcessor "org.ow2.asm:asm-tree:9.6"
+    annotationProcessor "org.ow2.asm:asm-commons:9.6"
+}
+
+processResources {
+    dependsOn generateChecksums
+    inputs.property "version", project.version
+    inputs.property "skijaVersion", skijaVersion
+
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+    filesMatching("skija-version.properties") {
+        expand "skijaVersion": inputs.properties.skijaVersion
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion.set("")
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.register('minifyJar', ProGuardTask) {
