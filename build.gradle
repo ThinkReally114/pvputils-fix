@@ -46,44 +46,63 @@ import proguard.gradle.ProGuardTask
 
 def platforms = ["windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "macos-x64", "macos-arm64", "android-x64", "android-arm64"]
 
-tasks.register('generateChecksums') {
+def nativeLibNames = [
+    "windows-x64": "skija.dll",
+    "windows-arm64": "skija.dll",
+    "linux-x64": "libskija.so",
+    "linux-arm64": "libskija.so",
+    "macos-x64": "libskija.dylib",
+    "macos-arm64": "libskija.dylib",
+    "android-x64": "libskija.so",
+    "android-arm64": "libskija.so"
+]
+
+tasks.register('downloadNatives') {
     doLast {
-        def checksumsFile = file("src/main/resources/checksums.properties")
-        def props = new Properties()
+        def nativesDir = file("src/main/resources/natives")
+        nativesDir.mkdirs()
 
         platforms.each { platform ->
             def artifactName = "skija-${platform}"
             def jarUrl = "https://repo1.maven.org/maven2/io/github/humbleui/${artifactName}/${skijaVersion}/${artifactName}-${skijaVersion}.jar"
+            def targetDir = new File(nativesDir, platform)
+            def expectedName = nativeLibNames[platform]
+            def targetFile = new File(targetDir, expectedName)
 
+            if (targetFile.exists()) {
+                println("Already exists: ${platform}/${expectedName}")
+                return
+            }
+
+            println("Downloading ${artifactName}...")
+            def tempFile = File.createTempFile("skija-", ".jar")
             try {
-                def tempFile = File.createTempFile("skija-checksum-", ".jar")
+                new URL(jarUrl).withInputStream { input ->
+                    tempFile.bytes = input.bytes
+                }
+
+                def jar = new java.util.jar.JarFile(tempFile)
                 try {
-                    new URL(jarUrl).withInputStream { input ->
-                        tempFile.bytes = input.bytes
-                    }
-                    def digest = java.security.MessageDigest.getInstance("SHA-256")
-                    tempFile.withInputStream { input ->
-                        def buffer = new byte[8192]
-                        int read
-                        while ((read = input.read(buffer)) != -1) {
-                            digest.update(buffer, 0, read)
+                    def found = false
+                    jar.entries().each { entry ->
+                        if (!entry.isDirectory() && entry.name.endsWith(expectedName)) {
+                            targetDir.mkdirs()
+                            new File(targetDir, expectedName).bytes = jar.getInputStream(entry).bytes
+                            println("Extracted: ${platform}/${expectedName}")
+                            found = true
                         }
                     }
-                    def hash = digest.digest().encodeHex().toString()
-                    props.setProperty(platform, hash)
-                    println("Checksum ${platform}: ${hash}")
+                    if (!found) {
+                        println("WARNING: ${expectedName} not found in ${artifactName}")
+                    }
                 } finally {
-                    tempFile.delete()
+                    jar.close()
                 }
-            } catch (Exception e) {
-                println("Warning: failed to compute checksum for ${platform}: ${e.message}")
+            } finally {
+                tempFile.delete()
             }
         }
-
-        checksumsFile.withOutputStream { out ->
-            props.store(out, "Skija native library SHA-256 checksums")
-        }
-        println("Checksums written to ${checksumsFile}")
+        println("All native libraries downloaded.")
     }
 }
 
@@ -115,7 +134,7 @@ dependencies {
 }
 
 processResources {
-    dependsOn generateChecksums
+    dependsOn downloadNatives
     inputs.property "version", project.version
     inputs.property "skijaVersion", skijaVersion
 
