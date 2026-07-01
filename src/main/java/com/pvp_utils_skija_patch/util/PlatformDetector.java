@@ -61,7 +61,8 @@ public class PlatformDetector {
                 || System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT).contains("dalvik")
                 || System.getProperty("java.vm.name", "").toLowerCase(Locale.ROOT).contains("art")
                 || System.getProperty("java.vm.vendor", "").toLowerCase(Locale.ROOT).contains("android")
-                || System.getProperty("android.os.Build$VERSION.SDK_INT") != null;
+                || System.getProperty("android.os.Build$VERSION.SDK_INT") != null
+                || getSystemProperty("ro.build.version.sdk") != null;
 
         if (!isAndroid) {
             try {
@@ -94,5 +95,19 @@ public class PlatformDetector {
     public static boolean isSupportedPlatform() {
         Platform platform = detectPlatform();
         return platform != Platform.UNKNOWN;
+    }
+
+    private static String getSystemProperty(String key) {
+        try {
+            Process process = Runtime.getRuntime().exec(new String[]{"getprop", key});
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+                String value = reader.readLine();
+                if (value != null && !value.isEmpty()) {
+                    return value.trim();
+                }
+            }
+            process.waitFor();
+        } catch (Exception ignored) {}
+        return null;
     }
 }
