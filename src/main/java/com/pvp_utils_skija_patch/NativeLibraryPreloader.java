@@ -64,6 +64,16 @@ public class NativeLibraryPreloader {
         Path cachedLib = cacheDir.resolve(platform.getArtifactSuffix()).resolve(platform.getNativeLibraryName());
 
         if (Files.exists(cachedLib)) {
+            String pathStr = cachedLib.toAbsolutePath().toString();
+            if ((platform == Platform.ANDROID_ARM64 || platform == Platform.ANDROID_X64) && pathStr.contains("/storage/emulated/")) {
+                SkijaPatchMod.LOGGER.warn("检测到外部存储缓存，清理并重新下载 / External storage cache detected, cleaning and re-downloading");
+                try { Files.deleteIfExists(cachedLib); } catch (Exception ignored) {}
+                cacheDir = getCacheDir(version);
+                cachedLib = cacheDir.resolve(platform.getArtifactSuffix()).resolve(platform.getNativeLibraryName());
+            }
+        }
+
+        if (Files.exists(cachedLib)) {
             SkijaPatchMod.LOGGER.info("找到已缓存的原生库: {} / Found cached native library: {}", cachedLib, cachedLib);
         } else {
             SkijaPatchMod.LOGGER.info("未找到缓存，正在为平台 {} 下载原生库... / No cached library found, downloading for platform: {}", platform, platform);
@@ -118,6 +128,20 @@ public class NativeLibraryPreloader {
     }
 
     private static Path getCacheDir(String version) {
+        Platform platform = PlatformDetector.detectPlatform();
+        if (platform == Platform.ANDROID_ARM64 || platform == Platform.ANDROID_X64) {
+            String tmpDir = System.getProperty("java.io.tmpdir");
+            if (tmpDir != null && !tmpDir.isEmpty()) {
+                return Path.of(tmpDir, ".skija-natives", version);
+            }
+            String userHome = System.getProperty("user.home", "");
+            if (userHome.startsWith("/storage/emulated/")) {
+                String internalBase = "/data/data/" + userHome.substring(
+                        userHome.indexOf("/Android/data/") + "/Android/data/".length(),
+                        userHome.indexOf("/", userHome.indexOf("/Android/data/") + "/Android/data/".length()));
+                return Path.of(internalBase, "files", ".skija-natives", version);
+            }
+        }
         String cacheBase = System.getProperty("user.home", ".");
         if (cacheBase.equals(".") || cacheBase.isEmpty()) {
             cacheBase = System.getProperty("java.io.tmpdir", "/tmp");
