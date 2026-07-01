@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, bundle-natives ]
     tags:
       - 'v*'
       - 'ver*'
