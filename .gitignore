@@ -1,0 +1,30 @@
+# Build
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Generated resources
+src/main/resources/checksums.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.eclipse/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Fabric
+run/
+logs/
+loom-cache/
+
+# Misc
+*.log

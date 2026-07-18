@@ -1,0 +1,3 @@
+// Skia Cross-Platform Dependencies
+// Version variable for easy updates
+ext.set("skijaVersion", "0.143.16")

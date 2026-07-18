@@ -1,0 +1,204 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.6.1'
+    }
+}
+
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+    id 'com.modrinth.minotaur' version '2.8.5'
+}
+
+def getVersionFromTag() {
+    def githubRef = System.getenv("GITHUB_REF")
+    if (githubRef != null && githubRef.startsWith("refs/tags/")) {
+        def tag = githubRef.substring("refs/tags/".length())
+        if (tag.startsWith("v")) {
+            return tag.substring(1)
+        }
+        return tag
+    }
+    return project.mod_version
+}
+
+version = getVersionFromTag()
+group = project.maven_group
+
+base {
+    archivesName = "${project.archives_base_name}-v${project.version}"
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://maven.fabricmc.net/' }
+    maven { url 'https://maven.terraformersmc.com/releases/' }
+    maven { url 'https://repo.spongepowered.org/repository/maven-public/' }
+    maven { url 'https://maven.parchmentmc.org/' }
+}
+
+apply from: "skija.gradle"
+
+import proguard.gradle.ProGuardTask
+
+def platforms = ["windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "macos-x64", "macos-arm64", "android-x64", "android-arm64"]
+
+tasks.register('generateChecksums') {
+    doLast {
+        def checksumsFile = file("src/main/resources/checksums.properties")
+        def props = new Properties()
+
+        platforms.each { platform ->
+            def artifactName = "skija-${platform}"
+            def jarUrl = "https://repo1.maven.org/maven2/io/github/humbleui/${artifactName}/${skijaVersion}/${artifactName}-${skijaVersion}.jar"
+
+            try {
+                def tempFile = File.createTempFile("skija-checksum-", ".jar")
+                try {
+                    new URL(jarUrl).withInputStream { input ->
+                        tempFile.bytes = input.bytes
+                    }
+                    def digest = java.security.MessageDigest.getInstance("SHA-256")
+                    tempFile.withInputStream { input ->
+                        def buffer = new byte[8192]
+                        int read
+                        while ((read = input.read(buffer)) != -1) {
+                            digest.update(buffer, 0, read)
+                        }
+                    }
+                    def hash = digest.digest().encodeHex().toString()
+                    props.setProperty(platform, hash)
+                    println("Checksum ${platform}: ${hash}")
+                } finally {
+                    tempFile.delete()
+                }
+            } catch (Exception e) {
+                println("Warning: failed to compute checksum for ${platform}: ${e.message}")
+            }
+        }
+
+        checksumsFile.withOutputStream { out ->
+            props.store(out, "Skija native library SHA-256 checksums")
+        }
+        println("Checksums written to ${checksumsFile}")
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.layered {
+        officialMojangMappings()
+    }
+
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // GSON for JSON parsing
+    implementation "com.google.code.gson:gson:2.10.1"
+
+    // Required to extract the bundled Node.js tar.xz archives on Linux/macOS.
+    implementation "org.apache.commons:commons-compress:1.27.1"
+    include "org.apache.commons:commons-compress:1.27.1"
+    implementation "org.tukaani:xz:1.10"
+    include "org.tukaani:xz:1.10"
+
+    // Skia - shared (Java API classes only)
+    implementation "io.github.humbleui:skija-shared:${skijaVersion}"
+    include "io.github.humbleui:skija-shared:${skijaVersion}"
+
+    // Skia natives are NOT bundled - downloaded at runtime based on platform
+
+    // Annotations for mixin
+    annotationProcessor "org.spongepowered:mixin:0.8.5"
+    annotationProcessor "com.google.code.gson:gson:2.10.1"
+    annotationProcessor "com.google.guava:guava:33.0.0-jre"
+    annotationProcessor "org.ow2.asm:asm:9.6"
+    annotationProcessor "org.ow2.asm:asm-tree:9.6"
+    annotationProcessor "org.ow2.asm:asm-commons:9.6"
+}
+
+processResources {
+    dependsOn generateChecksums
+    inputs.property "version", project.version
+    inputs.property "skijaVersion", skijaVersion
+
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+    filesMatching("skija-version.properties") {
+        expand "skijaVersion": inputs.properties.skijaVersion
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion.set("")
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.register('minifyJar', ProGuardTask) {
+    dependsOn remapJar
+
+    configuration(rootProject.file('proguard-rules.pro'))
+    dontobfuscate()
+    dontoptimize()
+    dontwarn()
+
+    doFirst {
+        def inputJar = remapJar.archiveFile.get().asFile
+        def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
+
+        injars(inputJar)
+        outjars(outputJar)
+
+        configurations.runtimeClasspath.each { File file ->
+            libraryjars(file, filter: '!META-INF/MANIFEST.MF')
+        }
+    }
+
+    doLast {
+        def inputJar = remapJar.archiveFile.get().asFile
+        def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
+        if (outputJar.exists()) {
+            if (inputJar.exists()) inputJar.delete()
+            outputJar.renameTo(inputJar)
+        }
+    }
+}
+
+build.dependsOn minifyJar
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = "pvputils-fix"
+    versionNumber = project.version
+    versionName = "v${project.version}"
+    uploadFile = remapJar
+    gameVersions = [project.minecraft_version]
+    loaders = ["fabric"]
+    dependencies {
+        required.project "fabric-api"
+    }
+}
