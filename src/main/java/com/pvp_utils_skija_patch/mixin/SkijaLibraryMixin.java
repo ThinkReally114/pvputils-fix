@@ -19,7 +19,7 @@ public class SkijaLibraryMixin {
             NativeLibraryPreloader.preload();
             ci.cancel();
         } catch (Exception e) {
-            SkijaPatchMod.LOGGER.warn("Mixin {}: 预加载失败 / Preload failed: {}", methodName, e.getMessage(), e);
+            SkijaPatchMod.LOGGER.warn("Preload failed: {}", methodName, e.getMessage(), e);
         }
     }
 

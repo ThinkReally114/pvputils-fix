@@ -96,22 +96,11 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-    // GSON for JSON parsing
     implementation "com.google.code.gson:gson:2.10.1"
 
-    // Required to extract the bundled Node.js tar.xz archives on Linux/macOS.
-    implementation "org.apache.commons:commons-compress:1.27.1"
-    include "org.apache.commons:commons-compress:1.27.1"
-    implementation "org.tukaani:xz:1.10"
-    include "org.tukaani:xz:1.10"
-
-    // Skia - shared (Java API classes only)
     implementation "io.github.humbleui:skija-shared:${skijaVersion}"
     include "io.github.humbleui:skija-shared:${skijaVersion}"
 
-    // Skia natives are NOT bundled - downloaded at runtime based on platform
-
-    // Annotations for mixin
     annotationProcessor "org.spongepowered:mixin:0.8.5"
     annotationProcessor "com.google.code.gson:gson:2.10.1"
     annotationProcessor "com.google.guava:guava:33.0.0-jre"

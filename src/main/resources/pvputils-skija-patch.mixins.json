@@ -4,8 +4,7 @@
   "package": "com.pvp_utils_skija_patch.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "SkijaLibraryMixin",
-    "NeteaseMusicLocalServiceMixin"
+    "SkijaLibraryMixin"
   ],
   "injectors": {
     "defaultRequire": 1

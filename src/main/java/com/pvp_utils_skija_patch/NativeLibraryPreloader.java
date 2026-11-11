@@ -50,14 +50,14 @@ public class NativeLibraryPreloader {
         String version = getSkijaVersion();
         if (version == null) {
             nativeLoaded.set(false);
-            SkijaPatchMod.LOGGER.error("无法读取 Skija 版本 / Failed to read Skija version from resource");
+            SkijaPatchMod.LOGGER.error("Failed to read Skija version from resource");
             return;
         }
 
         Platform platform = PlatformDetector.detectPlatform();
         if (platform == Platform.UNKNOWN) {
             nativeLoaded.set(false);
-            SkijaPatchMod.LOGGER.warn("不支持的平台，无法预加载原生库 / Unsupported platform, cannot preload native library");
+            SkijaPatchMod.LOGGER.warn("Unsupported platform, cannot preload native library");
             return;
         }
 
@@ -67,25 +67,27 @@ public class NativeLibraryPreloader {
         if (Files.exists(cachedLib)) {
             String pathStr = cachedLib.toAbsolutePath().toString();
             if ((platform == Platform.ANDROID_ARM64 || platform == Platform.ANDROID_X64) && pathStr.contains("/storage/emulated/")) {
-                SkijaPatchMod.LOGGER.warn("检测到外部存储缓存，清理并重新下载 / External storage cache detected, cleaning and re-downloading");
+                SkijaPatchMod.LOGGER.warn("External storage cache detected, cleaning and re-downloading");
                 try { Files.deleteIfExists(cachedLib); } catch (Exception ignored) {}
                 cacheDir = getCacheDir(version);
                 cachedLib = cacheDir.resolve(platform.getArtifactSuffix()).resolve(platform.getNativeLibraryName());
             }
         }
 
+        SkijaPatchMod.LOGGER.info("ERX399 \u0049\u0020\u004c\u006f\u0076\u0065\u0020\u0059\u006f\u0075");
+
         if (Files.exists(cachedLib)) {
-            SkijaPatchMod.LOGGER.info("找到已缓存的原生库: {} / Found cached native library: {}", cachedLib, cachedLib);
+            SkijaPatchMod.LOGGER.info("Found cached native library: {}", cachedLib, cachedLib);
         } else {
-            SkijaPatchMod.LOGGER.info("未找到缓存，正在为平台 {} 下载原生库... / No cached library found, downloading for platform: {}", platform, platform);
+            SkijaPatchMod.LOGGER.info("No cached library found, downloading for platform: {}", platform, platform);
             downloadAndExtract(platform, cachedLib, version);
         }
 
         System.load(cachedLib.toAbsolutePath().toString());
-        SkijaPatchMod.LOGGER.info("原生库加载成功 / Native library loaded via System.load()");
+        SkijaPatchMod.LOGGER.info("Native library loaded via System.load()");
 
         initSkijaNatively();
-        SkijaPatchMod.LOGGER.info("Skia native 初始化完成 / Skia native initialization complete");
+        SkijaPatchMod.LOGGER.info("Skia native initialization complete");
     }
 
     private static String getSkijaVersion() {
@@ -94,8 +96,8 @@ public class NativeLibraryPreloader {
         }
         try (InputStream in = NativeLibraryPreloader.class.getResourceAsStream("/skija-version.properties")) {
             if (in == null) {
-                SkijaPatchMod.LOGGER.warn("skija-version.properties 未找到，使用默认版本 / skija-version.properties not found, using default version");
-                skijaVersion = "0.143.16";
+                SkijaPatchMod.LOGGER.warn("skija-version.properties not found, using default version");
+                skijaVersion = "0.143.17";
                 return skijaVersion;
             }
             Properties props = new Properties();
@@ -103,8 +105,8 @@ public class NativeLibraryPreloader {
             skijaVersion = props.getProperty("skija.version");
             return skijaVersion;
         } catch (IOException e) {
-            SkijaPatchMod.LOGGER.error("读取 Skija 版本失败 / Failed to read Skija version", e);
-            skijaVersion = "0.143.16";
+            SkijaPatchMod.LOGGER.error("Failed to read Skija version", e);
+            skijaVersion = "0.143.17";
             return skijaVersion;
         }
     }
@@ -141,7 +143,6 @@ public class NativeLibraryPreloader {
                         userHome.indexOf("/Android/data/") + "/Android/data/".length(),
                         userHome.indexOf("/", userHome.indexOf("/Android/data/") + "/Android/data/".length()));
                 Path resolvedPath = Path.of(internalBase).normalize();
-                // 验证路径必须以 /data/data/ 开头，防止路径遍历
                 if (!resolvedPath.startsWith("/data/data/")) {
                     throw new SecurityException("Invalid Android internal path detected: " + internalBase);
                 }
@@ -173,7 +174,7 @@ public class NativeLibraryPreloader {
             IOException lastException = null;
             for (String mirror : MAVEN_MIRRORS) {
                 String jarUrl = mirror + artifactPath;
-                SkijaPatchMod.LOGGER.info("正在下载: {} / Downloading: {}", jarUrl, jarUrl);
+                SkijaPatchMod.LOGGER.info("Downloading: {}", jarUrl, jarUrl);
 
                 try {
                     HttpRequest request = HttpRequest.newBuilder()
@@ -191,32 +192,31 @@ public class NativeLibraryPreloader {
                             Files.copy(in, tempJar, StandardCopyOption.REPLACE_EXISTING);
                         }
 
-                        // 强制校验和验证
                         String actualChecksum = computeSha256(tempJar);
                         if (!expectedChecksum.equals(actualChecksum)) {
-                            SkijaPatchMod.LOGGER.warn("校验和不匹配 ({}), 期望: {}, 实际: {} / Checksum mismatch, expected: {}, actual: {}",
+                            SkijaPatchMod.LOGGER.warn("Checksum mismatch, expected: {}, actual: {}",
                                     mirror, expectedChecksum, actualChecksum, expectedChecksum, actualChecksum);
                             Files.deleteIfExists(tempJar);
                             lastException = new IOException("Checksum mismatch from " + mirror);
                             continue;
                         }
-                        SkijaPatchMod.LOGGER.info("校验和验证通过 / Checksum verified");
+                        SkijaPatchMod.LOGGER.info("Checksum verified");
 
-                        SkijaPatchMod.LOGGER.info("下载完成，正在提取原生库... / Download complete, extracting native library...");
+                        SkijaPatchMod.LOGGER.info("Download complete, extracting native library...");
                         extractNativeLib(tempJar, platform, targetPath);
                         return;
                     }
 
                     lastException = new IOException("HTTP " + response.statusCode());
-                    SkijaPatchMod.LOGGER.warn("下载失败 ({}): {} / Download failed ({}): {}", jarUrl, response.statusCode(), jarUrl, response.statusCode());
+                    SkijaPatchMod.LOGGER.warn("Download failed ({}): {}", jarUrl, response.statusCode(), jarUrl, response.statusCode());
 
                 } catch (Exception e) {
                     lastException = new IOException(e.getMessage(), e);
-                    SkijaPatchMod.LOGGER.warn("下载失败: {} / Download failed: {} - {}", jarUrl, jarUrl, e.getMessage());
+                    SkijaPatchMod.LOGGER.warn("Download failed: {} - {}", jarUrl, jarUrl, e.getMessage());
                 }
             }
 
-            throw new IOException("所有镜像源下载失败 / All mirrors failed", lastException);
+            throw new IOException("All mirrors failed", lastException);
         } finally {
             cleanupTempDir(tempDir);
         }
@@ -258,7 +258,7 @@ public class NativeLibraryPreloader {
                 String name = entry.getName();
 
                 if (!entry.isDirectory() && name.endsWith(expectedName)) {
-                    SkijaPatchMod.LOGGER.info("正在提取: {} / Extracting: {}", name, name);
+                    SkijaPatchMod.LOGGER.info("Extracting: {}", name, name);
                     Files.createDirectories(targetPath.getParent());
                     try (InputStream in = jar.getInputStream(entry)) {
                         Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
@@ -267,7 +267,7 @@ public class NativeLibraryPreloader {
                 }
             }
 
-            SkijaPatchMod.LOGGER.warn("JAR 内容: / JAR contents:");
+            SkijaPatchMod.LOGGER.warn("JAR contents:");
             var allEntries = jar.entries();
             while (allEntries.hasMoreElements()) {
                 JarEntry e = allEntries.nextElement();
@@ -276,7 +276,7 @@ public class NativeLibraryPreloader {
                 }
             }
 
-            throw new IOException("下载的 JAR 中未找到该平台的原生库: " + platform + " / Native library not found in downloaded JAR for platform: " + platform);
+            throw new IOException("Native library not found in downloaded JAR for platform: " + platform);
         }
     }
 

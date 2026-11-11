@@ -11,7 +11,7 @@
   "contact": {
     "github": "https://github.com/ThinkReally114/pvputils-fix"
   },
-  "license": "MIT",
+  "license": "PVPUtils Source-Available Non-Commercial License",
   "environment": "client",
   "entrypoints": {
     "client": [
