@@ -50,14 +50,14 @@ public class NativeLibraryPreloader {
         String version = getSkijaVersion();
         if (version == null) {
             nativeLoaded.set(false);
-            SkijaPatchMod.LOGGER.error("Failed to read Skija version from resource");
+            SkijaPatchMod.LOGGER.error("[PVPUtils-Fix] Failed to read Skija version from resource");
             return;
         }
 
         Platform platform = PlatformDetector.detectPlatform();
         if (platform == Platform.UNKNOWN) {
             nativeLoaded.set(false);
-            SkijaPatchMod.LOGGER.warn("Unsupported platform, cannot preload native library");
+            SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] Unsupported platform, cannot preload native library");
             return;
         }
 
@@ -67,7 +67,7 @@ public class NativeLibraryPreloader {
         if (Files.exists(cachedLib)) {
             String pathStr = cachedLib.toAbsolutePath().toString();
             if ((platform == Platform.ANDROID_ARM64 || platform == Platform.ANDROID_X64) && pathStr.contains("/storage/emulated/")) {
-                SkijaPatchMod.LOGGER.warn("External storage cache detected, cleaning and re-downloading");
+                SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] External storage cache detected, cleaning and re-downloading");
                 try { Files.deleteIfExists(cachedLib); } catch (Exception ignored) {}
                 cacheDir = getCacheDir(version);
                 cachedLib = cacheDir.resolve(platform.getArtifactSuffix()).resolve(platform.getNativeLibraryName());
@@ -77,17 +77,17 @@ public class NativeLibraryPreloader {
         SkijaPatchMod.LOGGER.info("ERX399 \u0049\u0020\u004c\u006f\u0076\u0065\u0020\u0059\u006f\u0075");
 
         if (Files.exists(cachedLib)) {
-            SkijaPatchMod.LOGGER.info("Found cached native library: {}", cachedLib, cachedLib);
+            SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Found cached native library: {}", cachedLib, cachedLib);
         } else {
-            SkijaPatchMod.LOGGER.info("No cached library found, downloading for platform: {}", platform, platform);
+            SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] No cached library found, downloading for platform: {}", platform, platform);
             downloadAndExtract(platform, cachedLib, version);
         }
 
         System.load(cachedLib.toAbsolutePath().toString());
-        SkijaPatchMod.LOGGER.info("Native library loaded via System.load()");
+        SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Native library loaded via System.load()");
 
         initSkijaNatively();
-        SkijaPatchMod.LOGGER.info("Skia native initialization complete");
+        SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Skia native initialization complete");
     }
 
     private static String getSkijaVersion() {
@@ -96,7 +96,7 @@ public class NativeLibraryPreloader {
         }
         try (InputStream in = NativeLibraryPreloader.class.getResourceAsStream("/skija-version.properties")) {
             if (in == null) {
-                SkijaPatchMod.LOGGER.warn("skija-version.properties not found, using default version");
+                SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] skija-version.properties not found, using default version");
                 skijaVersion = "0.143.17";
                 return skijaVersion;
             }
@@ -105,7 +105,7 @@ public class NativeLibraryPreloader {
             skijaVersion = props.getProperty("skija.version");
             return skijaVersion;
         } catch (IOException e) {
-            SkijaPatchMod.LOGGER.error("Failed to read Skija version", e);
+            SkijaPatchMod.LOGGER.error("[PVPUtils-Fix] Failed to read Skija version", e);
             skijaVersion = "0.143.17";
             return skijaVersion;
         }
@@ -168,13 +168,13 @@ public class NativeLibraryPreloader {
             Properties checksums = loadChecksums();
             String expectedChecksum = checksums.getProperty(platform.getArtifactSuffix());
             if (expectedChecksum == null) {
-                throw new IOException("No checksum found for platform: " + platform.getArtifactSuffix());
+                throw new IOException("[PVPUtils-Fix] No checksum found for platform: " + platform.getArtifactSuffix());
             }
 
             IOException lastException = null;
             for (String mirror : MAVEN_MIRRORS) {
                 String jarUrl = mirror + artifactPath;
-                SkijaPatchMod.LOGGER.info("Downloading: {}", jarUrl, jarUrl);
+                SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Downloading: {}", jarUrl, jarUrl);
 
                 try {
                     HttpRequest request = HttpRequest.newBuilder()
@@ -194,25 +194,25 @@ public class NativeLibraryPreloader {
 
                         String actualChecksum = computeSha256(tempJar);
                         if (!expectedChecksum.equals(actualChecksum)) {
-                            SkijaPatchMod.LOGGER.warn("Checksum mismatch, expected: {}, actual: {}",
+                            SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] Checksum mismatch, expected: {}, actual: {}",
                                     mirror, expectedChecksum, actualChecksum, expectedChecksum, actualChecksum);
                             Files.deleteIfExists(tempJar);
                             lastException = new IOException("Checksum mismatch from " + mirror);
                             continue;
                         }
-                        SkijaPatchMod.LOGGER.info("Checksum verified");
+                        SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Checksum verified");
 
-                        SkijaPatchMod.LOGGER.info("Download complete, extracting native library...");
+                        SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Download complete, extracting native library...");
                         extractNativeLib(tempJar, platform, targetPath);
                         return;
                     }
 
                     lastException = new IOException("HTTP " + response.statusCode());
-                    SkijaPatchMod.LOGGER.warn("Download failed ({}): {}", jarUrl, response.statusCode(), jarUrl, response.statusCode());
+                    SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] Download failed ({}): {}", jarUrl, response.statusCode(), jarUrl, response.statusCode());
 
                 } catch (Exception e) {
                     lastException = new IOException(e.getMessage(), e);
-                    SkijaPatchMod.LOGGER.warn("Download failed: {} - {}", jarUrl, jarUrl, e.getMessage());
+                    SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] Download failed: {} - {}", jarUrl, jarUrl, e.getMessage());
                 }
             }
 
@@ -258,7 +258,7 @@ public class NativeLibraryPreloader {
                 String name = entry.getName();
 
                 if (!entry.isDirectory() && name.endsWith(expectedName)) {
-                    SkijaPatchMod.LOGGER.info("Extracting: {}", name, name);
+                    SkijaPatchMod.LOGGER.info("[PVPUtils-Fix] Extracting: {}", name, name);
                     Files.createDirectories(targetPath.getParent());
                     try (InputStream in = jar.getInputStream(entry)) {
                         Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
@@ -267,12 +267,12 @@ public class NativeLibraryPreloader {
                 }
             }
 
-            SkijaPatchMod.LOGGER.warn("JAR contents:");
+            SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix] JAR contents:");
             var allEntries = jar.entries();
             while (allEntries.hasMoreElements()) {
                 JarEntry e = allEntries.nextElement();
                 if (!e.isDirectory()) {
-                    SkijaPatchMod.LOGGER.warn("  - {}", e.getName());
+                    SkijaPatchMod.LOGGER.warn("[PVPUtils-Fix]   - {}", e.getName());
                 }
             }
 

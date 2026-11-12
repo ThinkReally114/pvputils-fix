@@ -4,6 +4,9 @@
 -keep class com.pvp_utils_skija_patch.util.PlatformDetector$Platform { *; }
 
 -keep class com.pvp_utils_skija_patch.mixin.** { *; }
+-keep class com.pvp_utils_skija_patch.audio.** { *; }
+
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
 -keepclassmembers enum * {
     public static **[] values();

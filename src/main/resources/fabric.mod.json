@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "PVPUtils-fix",
   "icon": "icon.png",
-  "description": "Patches PVPUtils to support Windows, Linux, macOS, and Android by pre-loading the correct Skia native library.",
+  "description": "Patches PVPUtils with cross-platform Skia native loading and NetEase MP3 playback through Minecraft's sound engine.",
   "authors": [
     "ThinkReally114"
   ],

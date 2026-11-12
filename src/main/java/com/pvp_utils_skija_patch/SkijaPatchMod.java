@@ -10,18 +10,18 @@ public class SkijaPatchMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("PVPUtils-Fix initialized - pre-loading native libraries");
+        LOGGER.info("[PVPUtils-Fix] PVPUtils-Fix initialized - pre-loading native libraries");
 
         try {
             NativeLibraryPreloader.preload();
             if (NativeLibraryPreloader.isNativeLoaded()) {
-                LOGGER.info("Native library preloaded successfully for platform {}",
+                LOGGER.info("[PVPUtils-Fix] Native library preloaded successfully for platform {}",
                         NativeLibraryPreloader.getCurrentPlatform(), NativeLibraryPreloader.getCurrentPlatform());
             } else {
-                LOGGER.warn("Native library preload did not complete, platform may be unsupported");
+                LOGGER.warn("[PVPUtils-Fix] Native library preload did not complete, platform may be unsupported");
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to preload native library, Skia features will be unavailable", e);
+            LOGGER.error("[PVPUtils-Fix] Failed to preload native library, Skia features will be unavailable", e);
         }
     }
 }

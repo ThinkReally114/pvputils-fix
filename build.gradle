@@ -38,9 +38,16 @@ repositories {
     maven { url 'https://maven.terraformersmc.com/releases/' }
     maven { url 'https://repo.spongepowered.org/repository/maven-public/' }
     maven { url 'https://maven.parchmentmc.org/' }
+    maven { url 'https://jitpack.io' }
 }
 
 apply from: "skija.gradle"
+
+loom {
+    mixin {
+        useLegacyMixinAp = false
+    }
+}
 
 import proguard.gradle.ProGuardTask
 
@@ -101,12 +108,11 @@ dependencies {
     implementation "io.github.humbleui:skija-shared:${skijaVersion}"
     include "io.github.humbleui:skija-shared:${skijaVersion}"
 
-    annotationProcessor "org.spongepowered:mixin:0.8.5"
-    annotationProcessor "com.google.code.gson:gson:2.10.1"
-    annotationProcessor "com.google.guava:guava:33.0.0-jre"
-    annotationProcessor "org.ow2.asm:asm:9.6"
-    annotationProcessor "org.ow2.asm:asm-tree:9.6"
-    annotationProcessor "org.ow2.asm:asm-commons:9.6"
+    compileOnly('com.github.goxr3plus:java-stream-player:10.0.2') {
+        transitive = false
+    }
+    compileOnly "com.googlecode.soundlibs:jlayer:1.0.1.4"
+
 }
 
 processResources {
@@ -149,7 +155,7 @@ tasks.register('minifyJar', ProGuardTask) {
 
     doFirst {
         def inputJar = remapJar.archiveFile.get().asFile
-        def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
+        def outputJar = new File(inputJar.parentFile, inputJar.name.replaceFirst(/\.jar$/, '.min.jar'))
 
         injars(inputJar)
         outjars(outputJar)
@@ -161,7 +167,7 @@ tasks.register('minifyJar', ProGuardTask) {
 
     doLast {
         def inputJar = remapJar.archiveFile.get().asFile
-        def outputJar = new File(inputJar.parentFile, inputJar.name + '.min')
+        def outputJar = new File(inputJar.parentFile, inputJar.name.replaceFirst(/\.jar$/, '.min.jar'))
         if (outputJar.exists()) {
             if (inputJar.exists()) inputJar.delete()
             outputJar.renameTo(inputJar)
@@ -169,7 +175,7 @@ tasks.register('minifyJar', ProGuardTask) {
     }
 }
 
-build.dependsOn minifyJar
+build.dependsOn remapJar
 
 publishing {
     publications {

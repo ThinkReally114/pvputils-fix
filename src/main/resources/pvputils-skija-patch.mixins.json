@@ -3,8 +3,16 @@
   "minVersion": "0.8",
   "package": "com.pvp_utils_skija_patch.mixin",
   "compatibilityLevel": "JAVA_21",
+  "plugin": "com.pvp_utils_skija_patch.mixin.PatchMixinPlugin",
   "client": [
-    "SkijaLibraryMixin"
+    "SkijaLibraryMixin",
+    "MusicPlaybackServiceMixin",
+    "SoundBufferLibraryMixin",
+    "SoundEngineAccessor",
+    "SoundEngineMixin",
+    "SoundManagerAccessor",
+    "ChannelMixin",
+    "GlfwContextMixin"
   ],
   "injectors": {
     "defaultRequire": 1
